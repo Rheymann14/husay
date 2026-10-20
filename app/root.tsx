@@ -1,3 +1,4 @@
+import { ArrowLeft, FileQuestion, TriangleAlert } from "lucide-react";
 import { useEffect } from "react";
 import {
   data,
@@ -10,6 +11,7 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { EmptyState } from "~/components/empty-state";
 import { showToast, Toaster } from "~/components/toaster";
 import { getToast } from "~/lib/toast.server";
 import type { Route } from "./+types/root";
@@ -67,6 +69,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Something went wrong";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
+  const notFound = isRouteErrorResponse(error) && error.status === 404;
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "Page not found" : `Error ${error.status}`;
@@ -83,11 +86,20 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 
   return (
     <main className="mx-auto max-w-2xl p-6 pt-16">
-      <h1 className="text-2xl font-semibold text-slate-900">{message}</h1>
-      <p className="mt-2 text-slate-600">{details}</p>
-      <Link to="/" className="mt-6 inline-block text-blue-800 underline">
-        Back to programs
-      </Link>
+      <div className="rounded-lg border border-slate-200 bg-white">
+        <EmptyState
+          size="lg"
+          icon={notFound ? FileQuestion : TriangleAlert}
+          title={<span className="text-xl">{message}</span>}
+          description={details}
+          action={
+            <Link to="/" className="btn-primary">
+              <ArrowLeft className="size-4" aria-hidden />
+              Back to programs
+            </Link>
+          }
+        />
+      </div>
       {stack && (
         <pre className="mt-6 w-full overflow-x-auto rounded bg-slate-100 p-4 text-xs">
           <code>{stack}</code>

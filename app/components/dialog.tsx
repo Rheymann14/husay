@@ -64,3 +64,41 @@ export function Dialog({
     </dialog>
   );
 }
+
+/** Asks the user to confirm a destructive action, in place of window.confirm. */
+export function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmLabel,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: ReactNode;
+  confirmLabel: string;
+}) {
+  return (
+    <Dialog open={open} onClose={onClose} title={title}>
+      <p className="text-sm text-slate-600">{message}</p>
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary" data-autofocus>
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            onConfirm();
+          }}
+          className="btn-danger"
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </Dialog>
+  );
+}

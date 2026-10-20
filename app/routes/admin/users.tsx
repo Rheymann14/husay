@@ -1,11 +1,12 @@
 import { asc, count, eq, or, sql } from "drizzle-orm";
-import { KeyRound, Trash2, UserPlus } from "lucide-react";
+import { KeyRound, SearchX, Trash2, UserPlus, Users as UsersIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { data, useFetcher } from "react-router";
 import { z } from "zod";
 
 import { Combobox, type ComboboxOption } from "~/components/combobox";
-import { Dialog } from "~/components/dialog";
+import { ConfirmDialog, Dialog } from "~/components/dialog";
+import { ClearSearchLink, EmptyState } from "~/components/empty-state";
 import { Pagination, SearchBox } from "~/components/list-controls";
 import { useResultToast, type ActionResult as Result } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
@@ -269,13 +270,92 @@ function AddUserDialog() {
   );
 }
 
+function ResetPasswordDialog({ user }: { user: UserRow }) {
+  const [open, setOpen] = useState(false);
+  // Each opening gets a fresh form and fetcher, so old input and errors are gone.
+  const [attempt, setAttempt] = useState(0);
+  const fetcher = useFetcher<Result>({ key: `reset-password-${user.id}-${attempt}` });
+  const busy = fetcher.state !== "idle";
+  const result = fetcher.data;
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && result?.ok) setOpen(false);
+  }, [fetcher.state, result]);
+  // Errors show inside the dialog, which would cover a toast.
+  useResultToast(result?.ok ? result : undefined);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="rounded-md p-1.5 text-slate-500 hover:bg-navy-50 hover:text-navy-800"
+        title="Reset password"
+        aria-label={`Reset password for ${user.name}`}
+        onClick={() => {
+          setAttempt((n) => n + 1);
+          setOpen(true);
+        }}
+      >
+        <KeyRound className="size-4" aria-hidden />
+      </button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Reset password"
+        description={`${user.name} (${user.email}) will be signed out everywhere.`}
+      >
+        <fetcher.Form key={attempt} method="post" className="space-y-3">
+          <input type="hidden" name="intent" value="reset-password" />
+          <input type="hidden" name="id" value={user.id} />
+          <label className="block">
+            <span className="label">New password</span>
+            <input
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={MIN_PASSWORD_LENGTH}
+              required
+              data-autofocus
+              className="input mt-1"
+            />
+            <p className="hint">
+              At least {MIN_PASSWORD_LENGTH} characters. Ask them to change it
+              under My account.
+            </p>
+          </label>
+          {result && !result.ok && (
+            <p
+              role="alert"
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {result.error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button type="submit" disabled={busy} className="btn-primary">
+              <KeyRound className="size-4" aria-hidden />
+              {busy ? "Resetting…" : "Reset password"}
+            </button>
+          </div>
+        </fetcher.Form>
+      </Dialog>
+    </>
+  );
+}
+
 function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
   const roleFetcher = useFetcher<Result>();
-  const resetFetcher = useFetcher<Result>();
   const deleteFetcher = useFetcher<Result>();
   useResultToast(roleFetcher.data);
-  useResultToast(resetFetcher.data);
   useResultToast(deleteFetcher.data);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const pendingRole = roleFetcher.formData?.get("role");
   const role = pendingRole != null ? String(pendingRole) : user.role;
 
@@ -308,38 +388,12 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
       </td>
       <td className="px-3 py-2">
         <div className="flex justify-end gap-1">
-          <button
-            type="button"
-            className="rounded-md p-1.5 text-slate-500 hover:bg-navy-50 hover:text-navy-800"
-            title="Reset password"
-            aria-label={`Reset password for ${user.name}`}
-            onClick={() => {
-              const pw = prompt(
-                `New password for ${user.email} (at least ${MIN_PASSWORD_LENGTH} characters):`,
-              );
-              if (pw) {
-                resetFetcher.submit(
-                  { intent: "reset-password", id: String(user.id), password: pw },
-                  { method: "post" },
-                );
-              }
-            }}
-          >
-            <KeyRound className="size-4" aria-hidden />
-          </button>
+          <ResetPasswordDialog user={user} />
           {!isMe && (
-            <deleteFetcher.Form
-              method="post"
-              onSubmit={(e) => {
-                if (!confirm(`Remove ${user.email}? They will no longer be able to sign in.`)) {
-                  e.preventDefault();
-                }
-              }}
-            >
-              <input type="hidden" name="intent" value="delete" />
-              <input type="hidden" name="id" value={user.id} />
+            <>
               <button
-                type="submit"
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
                 disabled={deleteFetcher.state !== "idle"}
                 className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-700"
                 title="Remove user"
@@ -347,7 +401,20 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
               >
                 <Trash2 className="size-4" aria-hidden />
               </button>
-            </deleteFetcher.Form>
+              <ConfirmDialog
+                open={confirmingDelete}
+                onClose={() => setConfirmingDelete(false)}
+                onConfirm={() =>
+                  deleteFetcher.submit(
+                    { intent: "delete", id: String(user.id) },
+                    { method: "post" },
+                  )
+                }
+                title="Remove user?"
+                message={`${user.name} (${user.email}) will no longer be able to sign in.`}
+                confirmLabel="Remove"
+              />
+            </>
           )}
         </div>
       </td>
@@ -374,9 +441,20 @@ export default function Users({ loaderData }: Route.ComponentProps) {
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         {users.length === 0 ? (
-          <p className="p-8 text-center text-slate-500">
-            {query ? `No users match “${query}”.` : "No users yet."}
-          </p>
+          query ? (
+            <EmptyState
+              icon={SearchX}
+              title={`No users match “${query}”`}
+              description="Search by name or email address."
+              action={<ClearSearchLink />}
+            />
+          ) : (
+            <EmptyState
+              icon={UsersIcon}
+              title="No users yet"
+              description="Add managers or admins with “Add user”."
+            />
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">

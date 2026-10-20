@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Search, SearchX } from "lucide-react";
 import {
   type ReactNode,
   useEffect,
@@ -272,7 +272,8 @@ export function Combobox({
               className="min-h-0 overflow-y-auto p-1"
             >
               {filtered.length === 0 ? (
-                <li className="px-2 py-5 text-center text-sm text-slate-500">
+                <li className="flex flex-col items-center gap-1.5 px-2 py-5 text-center text-sm text-slate-500">
+                  <SearchX className="size-5 text-slate-400" aria-hidden />
                   {emptyText}
                 </li>
               ) : (

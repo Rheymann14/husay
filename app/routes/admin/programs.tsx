@@ -1,7 +1,10 @@
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { FolderPlus, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { data, Link, useFetcher } from "react-router";
 
 import { Combobox } from "~/components/combobox";
+import { ConfirmDialog } from "~/components/dialog";
+import { ClearSearchLink, EmptyState } from "~/components/empty-state";
 import { Pagination, SearchBox } from "~/components/list-controls";
 import { statusOptions } from "~/components/status-badge";
 import { useStatusSettings } from "~/components/status-settings";
@@ -85,19 +88,12 @@ function StatusSelect({
 function DeleteButton({ program }: { program: ProgramListItem }) {
   const fetcher = useFetcher<ActionResult>();
   useResultToast(fetcher.data);
+  const [confirming, setConfirming] = useState(false);
   return (
-    <fetcher.Form
-      method="post"
-      onSubmit={(e) => {
-        if (!confirm(`Delete "${program.title}"? This cannot be undone.`)) {
-          e.preventDefault();
-        }
-      }}
-    >
-      <input type="hidden" name="intent" value="delete" />
-      <input type="hidden" name="id" value={program.id} />
+    <>
       <button
-        type="submit"
+        type="button"
+        onClick={() => setConfirming(true)}
         disabled={fetcher.state !== "idle"}
         className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-700"
         aria-label={`Delete ${program.shortName}`}
@@ -105,7 +101,20 @@ function DeleteButton({ program }: { program: ProgramListItem }) {
       >
         <Trash2 className="size-4" aria-hidden />
       </button>
-    </fetcher.Form>
+      <ConfirmDialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        onConfirm={() =>
+          fetcher.submit(
+            { intent: "delete", id: String(program.id) },
+            { method: "post" },
+          )
+        }
+        title="Delete program?"
+        message={`“${program.title}” will be deleted. This cannot be undone.`}
+        confirmLabel="Delete"
+      />
+    </>
   );
 }
 
@@ -134,11 +143,26 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         {programs.length === 0 ? (
-          <p className="p-8 text-center text-slate-500">
-            {query
-              ? `No programs match “${query}”.`
-              : "No programs yet. Click “Add program” to create the first one."}
-          </p>
+          query ? (
+            <EmptyState
+              icon={SearchX}
+              title={`No programs match “${query}”`}
+              description="Check the spelling or try a different word."
+              action={<ClearSearchLink />}
+            />
+          ) : (
+            <EmptyState
+              icon={FolderPlus}
+              title="No programs yet"
+              description="Add the first program. Once published, it shows on the public page."
+              action={
+                <Link to="/admin/programs/new" className="btn-primary">
+                  <Plus className="size-4" aria-hidden />
+                  Add program
+                </Link>
+              }
+            />
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">

@@ -1,9 +1,10 @@
-import { ArrowLeft, Lock, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Link2, Lock, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { data, Form, Link, useNavigation } from "react-router";
 import { z } from "zod";
 
 import { Combobox } from "~/components/combobox";
+import { EmptyState } from "~/components/empty-state";
 import { RichTextEditor } from "~/components/rich-text-editor";
 import { SortableItem, SortableList } from "~/components/sortable-list";
 import { statusOptions } from "~/components/status-badge";
@@ -500,9 +501,13 @@ export default function ProgramForm({
             </button>
           </div>
           {links.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
-              No application link yet.
-            </p>
+            <EmptyState
+              size="sm"
+              icon={Link2}
+              title="No application link yet"
+              description="Add one so people know where to apply."
+              className="rounded-lg border border-dashed border-slate-300"
+            />
           ) : (
             <SortableList items={links} getId={linkId} onReorder={setLinks}>
               <ul className="space-y-2">

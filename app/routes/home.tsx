@@ -1,4 +1,4 @@
-import { ChevronRight, Eye } from "lucide-react";
+import { ChevronRight, Eye, GraduationCap, SearchX } from "lucide-react";
 import {
   Link,
   Outlet,
@@ -7,6 +7,7 @@ import {
   useParams,
 } from "react-router";
 
+import { ClearSearchLink, EmptyState } from "~/components/empty-state";
 import { Pagination, SearchBox } from "~/components/list-controls";
 import { SiteHeader } from "~/components/site-header";
 import { StatusBadge } from "~/components/status-badge";
@@ -49,6 +50,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { search } = useLocation();
   const navigate = useNavigate();
   const selectedId = programId ? Number(programId) : null;
+  // Nothing published at all, as opposed to a search with no matches.
+  const nothingPosted = total === 0 && !query;
 
   // Keep ?q= and ?page= so the list stays put while a briefer is open.
   const programUrl = (id: number) => `/programs/${id}${search}`;
@@ -75,25 +78,37 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               <h1 className="text-base font-semibold text-navy-900">
                 List of HUSAY Programs
               </h1>
-              <p className="text-xs text-slate-500">
-                Select a program to view its briefer and how to apply.
-              </p>
+              {!nothingPosted && (
+                <p className="text-xs text-slate-500">
+                  Select a program to view its briefer and how to apply.
+                </p>
+              )}
             </div>
-            <SearchBox placeholder="Search programs…" />
+            {!nothingPosted && <SearchBox placeholder="Search programs…" />}
           </div>
         </div>
 
         <div className="grid items-start gap-4 xl:grid-cols-2">
           <section
             aria-label="Programs"
-            className="overflow-hidden rounded-lg border border-slate-200 bg-white"
+            className={`overflow-hidden rounded-lg border border-slate-200 bg-white ${
+              nothingPosted ? "xl:col-span-2" : ""
+            }`}
           >
-            {programs.length === 0 ? (
-              <p className="p-8 text-center text-slate-500">
-                {query
-                  ? `No programs match “${query}”.`
-                  : "No programs have been posted yet."}
-              </p>
+            {nothingPosted ? (
+              <EmptyState
+                size="lg"
+                icon={GraduationCap}
+                title="No programs posted yet"
+                description="HUSAY programs will be listed here once they are announced, each with a briefer and how to apply. Please check back soon."
+              />
+            ) : programs.length === 0 ? (
+              <EmptyState
+                icon={SearchX}
+                title={`No programs match “${query}”`}
+                description="Check the spelling or try a different word."
+                action={<ClearSearchLink />}
+              />
             ) : (
               <>
                 {/* Table for tablets and up */}
@@ -196,7 +211,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             />
           </section>
 
-          <Outlet />
+          {/* With nothing to pick, the "select a program" panel is left out. */}
+          {!nothingPosted && <Outlet />}
         </div>
       </main>
 

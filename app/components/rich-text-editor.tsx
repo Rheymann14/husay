@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { Dialog } from "~/components/dialog";
 import { toHtml } from "~/lib/rich-text";
 
 type Props = {
@@ -81,6 +82,8 @@ export function RichTextEditor({ name, defaultValue = "", label, placeholder }: 
     if (!expanded) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // Esc in the link dialog closes only the dialog.
+      if (document.querySelector("dialog[open]")) return;
       e.stopPropagation();
       setExpanded(false);
     };
@@ -178,17 +181,40 @@ function Toolbar({
 
   const chain = () => editor!.chain().focus();
 
-  const setLink = () => {
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkHref, setLinkHref] = useState("");
+
+  const openLinkDialog = () => {
     if (!editor) return;
-    const current = editor.getAttributes("link").href as string | undefined;
-    const input = window.prompt("Link address (https://…)", current ?? "https://");
-    if (input == null) return;
-    const href = input.trim();
+    setLinkHref((editor.getAttributes("link").href as string | undefined) ?? "");
+    setLinkOpen(true);
+  };
+
+  const closeLinkDialog = () => {
+    setLinkOpen(false);
+    editor?.commands.focus();
+  };
+
+  const applyLink = () => {
+    if (!editor) return;
+    setLinkOpen(false);
+    const href = linkHref.trim();
     if (!href || href === "https://") {
       chain().extendMarkRange("link").unsetLink().run();
       return;
     }
     const withProtocol = /^(https?:|mailto:)/i.test(href) ? href : `https://${href}`;
+    // With no text selected, the address itself becomes the link text.
+    if (editor.state.selection.empty && !editor.isActive("link")) {
+      chain()
+        .insertContent({
+          type: "text",
+          text: href,
+          marks: [{ type: "link", attrs: { href: withProtocol } }],
+        })
+        .run();
+      return;
+    }
     chain().extendMarkRange("link").setLink({ href: withProtocol }).run();
   };
 
@@ -207,7 +233,7 @@ function Toolbar({
       <ToolButton icon={ListIndentIncrease} label="Indent / sub-bullet (Tab)" onClick={() => chain().sinkListItem("listItem").run()} disabled={!state?.canSink} />
       <ToolButton icon={ListIndentDecrease} label="Outdent (Shift+Tab)" onClick={() => chain().liftListItem("listItem").run()} disabled={!state?.canLift} />
       <Divider />
-      <ToolButton icon={Link} label="Add or edit link" active={state?.link} onClick={setLink} disabled={!editor} />
+      <ToolButton icon={Link} label="Add or edit link" active={state?.link} onClick={openLinkDialog} disabled={!editor} />
       <ToolButton icon={Unlink} label="Remove link" onClick={() => chain().extendMarkRange("link").unsetLink().run()} disabled={!state?.link} />
       <Divider />
       <ToolButton icon={Undo2} label="Undo (Ctrl+Z)" onClick={() => chain().undo().run()} disabled={!state?.canUndo} />
@@ -218,6 +244,40 @@ function Toolbar({
         label={expanded ? "Exit full screen (Esc)" : "Expand to full screen"}
         onClick={onToggleExpanded}
       />
+      {/* Not a <form>: the editor already sits inside the program form. */}
+      <Dialog
+        open={linkOpen}
+        onClose={closeLinkDialog}
+        title={state?.link ? "Edit link" : "Add link"}
+        description="Leave the address empty to remove the link."
+      >
+        <label className="block">
+          <span className="label">Link address</span>
+          <input
+            type="text"
+            inputMode="url"
+            value={linkHref}
+            onChange={(e) => setLinkHref(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              applyLink();
+            }}
+            placeholder="https://…"
+            data-autofocus
+            className="input mt-1"
+          />
+        </label>
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={closeLinkDialog} className="btn-secondary">
+            Cancel
+          </button>
+          <button type="button" onClick={applyLink} className="btn-primary">
+            <Link className="size-4" aria-hidden />
+            Save link
+          </button>
+        </div>
+      </Dialog>
     </div>
   );
 }
