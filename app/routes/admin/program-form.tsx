@@ -14,20 +14,18 @@ import { z } from "zod";
 import { Combobox } from "~/components/combobox";
 import { RichTextEditor } from "~/components/rich-text-editor";
 import { statusOptions } from "~/components/status-badge";
+import { useStatusSettings } from "~/components/status-settings";
 import { useResultToast, type ActionResult } from "~/components/toaster";
 import { SITE } from "~/lib/branding";
-import {
-  centavosToInput,
-  formatDuration,
-  parsePesoToCentavos,
-} from "~/lib/format";
+import { formatDuration } from "~/lib/format";
 import {
   getProgram,
+  isValidStatusSetting,
   listStatuses,
-  nextProgramSortOrder,
   saveProgram,
 } from "~/lib/programs.server";
 import { sanitizeHtml } from "~/lib/sanitize-html.server";
+import { statusFromDates, todayInManila } from "~/lib/status";
 import { redirectWithToast } from "~/lib/toast.server";
 import type { Route } from "./+types/program-form";
 
@@ -45,13 +43,13 @@ function parseId(value: string | undefined) {
 
 export async function loader({ params }: Route.LoaderArgs) {
   const id = parseId(params.programId);
-  const [program, statuses, nextSortOrder] = await Promise.all([
+  const [program, statuses] = await Promise.all([
     id == null ? null : getProgram(id, { includeDrafts: true }),
     listStatuses(),
-    nextProgramSortOrder(),
   ]);
   if (id != null && !program) throw data("Program not found", { status: 404 });
-  return { program, statuses, nextSortOrder };
+  // Sent along so the form previews the automatic status with the server's date.
+  return { program, statuses, today: todayInManila() };
 }
 
 const optionalDate = z
@@ -71,15 +69,7 @@ const programSchema = z
     endDate: optionalDate,
     durationDetails: richText,
     durationPosition: z.number().int().min(0),
-    funding: z
-      .string()
-      .transform((v) => parsePesoToCentavos(v))
-      .refine((v) => v == null || Number.isFinite(v), "Enter an amount like 23,647,292.92"),
-    statusId: z
-      .string()
-      .transform((v) => (v ? Number(v) : null))
-      .refine((v) => v == null || Number.isInteger(v), "Invalid status"),
-    sortOrder: z.coerce.number().int("Enter a whole number"),
+    status: z.string(),
     isPublished: z.boolean(),
     links: z.array(
       z.object({
@@ -133,18 +123,18 @@ export async function action({ request, params }: Route.ActionArgs) {
     endDate: text("endDate"),
     durationDetails: await sanitizeHtml(text("durationDetails")),
     durationPosition: rows.filter((r) => r.index < durationAt).length,
-    funding: text("funding"),
-    statusId: text("statusId"),
-    sortOrder: text("sortOrder"),
+    status: text("status"),
     isPublished: form.get("isPublished") === "on",
     links,
     sections,
   };
 
   const parsed = programSchema.safeParse(values);
-  if (!parsed.success) {
+  const statusOk = await isValidStatusSetting(values.status);
+  if (!parsed.success || !statusOk) {
     const errors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
+    if (!statusOk) errors.status = "Pick a status";
+    for (const issue of parsed.error?.issues ?? []) {
       const path = [...issue.path];
       if (path[0] === "sections" && typeof path[1] === "number") {
         path[1] = rows[path[1]].index;
@@ -158,11 +148,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     return data({ errors, values, result }, { status: 400 });
   }
 
-  const { funding, ...rest } = parsed.data;
-  await saveProgram(id, { ...rest, fundingCentavos: funding });
+  await saveProgram(id, parsed.data);
   throw await redirectWithToast("/admin", {
     type: "success",
-    message: `“${rest.shortName}” ${id == null ? "added" : "saved"}.`,
+    message: `“${parsed.data.shortName}” ${id == null ? "added" : "saved"}.`,
   });
 }
 
@@ -177,9 +166,20 @@ const NEW_PROGRAM_ROWS = {
   after: ["Description / Profile of Target Participants"],
 };
 
+// isNew rows were added since the last save and are highlighted.
 type BrieferRow =
-  | { key: number; kind: "row"; heading: string; body: string }
+  | { key: number; kind: "row"; heading: string; body: string; isNew?: boolean }
   | { key: number; kind: "duration" };
+
+const newRowHighlight = "border-amber-300 bg-amber-50";
+
+function NewTag() {
+  return (
+    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-300">
+      New
+    </span>
+  );
+}
 
 function initialRows(
   sections: { heading: string; body: string }[],
@@ -203,7 +203,8 @@ export default function ProgramForm({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { program, statuses, nextSortOrder } = loaderData;
+  const { program, statuses, today } = loaderData;
+  const statusSettings = useStatusSettings(statuses);
   const navigation = useNavigation();
   const saving = navigation.state === "submitting";
   const errors: Record<string, string> = actionData?.errors ?? {};
@@ -220,6 +221,7 @@ export default function ProgramForm({
       key: i,
       label: l.label,
       url: l.url,
+      isNew: false,
     })),
   );
   const [nextKey, setNextKey] = useState(links.length);
@@ -227,7 +229,12 @@ export default function ProgramForm({
   const addLink = () => {
     setLinks((rows) => [
       ...rows,
-      { key: nextKey, label: rows.length === 0 ? "Apply Here" : "", url: "" },
+      {
+        key: nextKey,
+        label: rows.length === 0 ? "Apply Here" : "",
+        url: "",
+        isNew: true,
+      },
     ]);
     setNextKey((k) => k + 1);
   };
@@ -253,7 +260,10 @@ export default function ProgramForm({
   const [nextRowKey, setNextRowKey] = useState(rows.length + 1);
 
   const addRow = () => {
-    setRows((r) => [...r, { key: nextRowKey, kind: "row", heading: "", body: "" }]);
+    setRows((r) => [
+      ...r,
+      { key: nextRowKey, kind: "row", heading: "", body: "", isNew: true },
+    ]);
     setNextRowKey((k) => k + 1);
   };
   const updateHeading = (key: number, heading: string) =>
@@ -273,9 +283,8 @@ export default function ProgramForm({
 
   const durationPosition = rows.findIndex((r) => r.kind === "duration");
 
-  const defaultStatus =
-    v?.statusId ??
-    String(program?.statusId ?? (program ? "" : (statuses[0]?.id ?? "")));
+  const defaultStatus = v?.status ?? program?.statusSetting ?? "auto";
+  const autoStatus = statusFromDates(startDate || null, endDate || null, today);
 
   // Index among the custom rows, which is how the server reports row errors.
   let rowIndex = -1;
@@ -357,13 +366,18 @@ export default function ProgramForm({
               <span className="label">Status</span>
               <span className="mt-1 block">
                 <Combobox
-                  name="statusId"
+                  name="status"
                   defaultValue={defaultStatus}
-                  options={statusOptions(statuses)}
+                  options={statusOptions(statuses, autoStatus)}
+                  footer={statusSettings.footer}
                   searchPlaceholder="Search statuses…"
                 />
               </span>
-              <FieldError message={errors.statusId} />
+              <p className="hint">
+                Automatic follows the dates: Upcoming before the start, Ongoing
+                until the end, then Closed.
+              </p>
+              <FieldError message={errors.status} />
             </label>
           </div>
         </section>
@@ -445,7 +459,9 @@ export default function ProgramForm({
               return (
                 <li
                   key={row.key}
-                  className="space-y-2 rounded-md border border-slate-200 bg-slate-50/60 p-3"
+                  className={`space-y-2 rounded-md border p-3 ${
+                    row.isNew ? newRowHighlight : "border-slate-200 bg-slate-50/60"
+                  }`}
                 >
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
@@ -460,6 +476,7 @@ export default function ProgramForm({
                       <FieldError message={errors[`sections.${rowIndex}.heading`]} />
                     </div>
                     <div className="flex shrink-0 items-center">
+                      {row.isNew && <NewTag />}
                       {moveButtons}
                       <button
                         type="button"
@@ -513,10 +530,12 @@ export default function ProgramForm({
               {links.map((link, i) => (
                 <li
                   key={link.key}
-                  className="grid grid-cols-[auto_1fr_auto] items-start gap-2 sm:grid-cols-[auto_12rem_1fr_auto]"
+                  className={`grid grid-cols-[auto_1fr_auto] items-start gap-2 rounded-md border p-1.5 sm:grid-cols-[auto_12rem_1fr_auto] ${
+                    link.isNew ? newRowHighlight : "border-transparent"
+                  }`}
                 >
                   <GripVertical
-                    className="mt-2.5 size-4 text-slate-300"
+                    className={`mt-2.5 size-4 ${link.isNew ? "text-amber-500" : "text-slate-300"}`}
                     aria-hidden
                   />
                   <div>
@@ -556,35 +575,8 @@ export default function ProgramForm({
           )}
         </section>
 
-        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold text-slate-900">Display settings</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="label">Order in list</span>
-              <input
-                type="number"
-                name="sortOrder"
-                min={0}
-                defaultValue={v?.sortOrder ?? program?.sortOrder ?? nextSortOrder}
-                className="input mt-1"
-              />
-              <FieldError message={errors.sortOrder} />
-            </label>
-            <label className="block">
-              <span className="label">Total funding requested (₱)</span>
-              <input
-                name="funding"
-                inputMode="decimal"
-                defaultValue={
-                  v?.funding ?? centavosToInput(program?.fundingCentavos ?? null)
-                }
-                placeholder="23,647,292.92"
-                className="input mt-1"
-              />
-              <FieldError message={errors.funding} />
-              <p className="hint">Internal only. Not shown on the public page.</p>
-            </label>
-          </div>
+        <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="font-semibold text-slate-900">Visibility</h2>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -596,6 +588,9 @@ export default function ProgramForm({
               Published (visible on the public list)
             </span>
           </label>
+          <p className="hint">
+            Programs are listed by date: earliest start first.
+          </p>
         </section>
 
         <div className="flex justify-end gap-2 pb-8">
@@ -607,6 +602,7 @@ export default function ProgramForm({
           </button>
         </div>
       </Form>
+      {statusSettings.dialog}
     </div>
   );
 }

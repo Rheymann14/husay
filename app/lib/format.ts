@@ -30,29 +30,15 @@ export function formatDuration(
   return "To be announced";
 }
 
-const peso = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-  minimumFractionDigits: 2,
+const shortDate = new Intl.DateTimeFormat("en-PH", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "Asia/Manila",
 });
 
-export function formatPeso(centavos: number | null): string {
-  return centavos == null ? "" : peso.format(centavos / 100);
-}
-
-/** "23,647,292.92" -> 2364729292. Returns null for blank input, NaN if invalid. */
-export function parsePesoToCentavos(input: string): number | null {
-  const cleaned = input.replace(/[₱,\s]|Php/gi, "");
-  if (cleaned === "") return null;
-  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return Number.NaN;
-  const [whole, fraction = ""] = cleaned.split(".");
-  return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
-}
-
-export function centavosToInput(centavos: number | null): string {
-  if (centavos == null) return "";
-  return (centavos / 100).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+/** SQLite CURRENT_TIMESTAMP ("2026-10-20 03:59:01", UTC) -> "Oct 20, 2026". */
+export function formatTimestamp(value: string): string {
+  const date = new Date(`${value.replace(" ", "T")}Z`);
+  return Number.isNaN(date.getTime()) ? "" : shortDate.format(date);
 }

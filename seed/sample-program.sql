@@ -5,7 +5,7 @@
 
 INSERT INTO `programs` (
 	`short_name`, `title`, `start_date`, `end_date`, `duration_details`,
-	`duration_position`, `funding_centavos`, `status_id`, `sort_order`, `is_published`
+	`duration_position`, `is_published`
 ) VALUES (
 	'HEIL Fellowship',
 	'Higher Education Innovation Leaders Fellowship Program',
@@ -18,9 +18,6 @@ INSERT INTO `programs` (
   - 1.5-day capstone / culminating session in Manila',
 	-- Duration comes after Program Provider and Brief Description.
 	2,
-	2364729292,
-	(SELECT `id` FROM `statuses` WHERE `name` = 'Ongoing'),
-	1,
 	1
 );
 

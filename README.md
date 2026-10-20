@@ -1,24 +1,41 @@
 # HUSAY Programs
 
-Public list of CHED HUSAY programs with a briefer for each, and a signed-in area where staff manage programs, statuses and users.
+Public list of CHED HUSAY programs with a briefer for each, and a signed-in area where staff manage programs and users.
 
 Built with React Router (full-stack React + TypeScript) on Cloudflare Workers, with a Cloudflare D1 (SQLite) database and Drizzle ORM.
 
 ## What's in it
 
 **Public page (`/`)**
-- Table of programs: No., Program, Title Program, Duration of Program, Status, View
+- Table of programs: No., Program, Title Program, Duration of Program, Status, View, listed by date (earliest start first)
 - Click a row to open the program briefer in a panel on the right (full screen on phones)
 - Application links (for example “Apply Here”) at the bottom of the briefer
 - CHED and Bagong Pilipinas logos in the header
 
 **Admin area (`/admin`, sign-in required)**
-- **Programs**: add, edit, delete, change status, publish or hide, set list order, add or remove application link rows
-- **Statuses** (admins only): edit the name, color and icon of Ongoing and Closed, or add new statuses
-- **Users** (admins only): add managers or admins, reset passwords, change roles, remove users
+- **Programs**: search, add, edit, delete, change status, publish or hide, add or remove application link rows
+- **Users** (admins only): search, add managers or admins, reset passwords, change roles, remove users
 - **My account**: change your own password
 
-There is no public sign-up. Managers can manage programs; admins can also manage statuses and users.
+There is no public sign-up. Managers can manage programs; admins can also manage users and statuses.
+
+## Program status
+
+Each program shows one of three built-in statuses, or none:
+
+- **Upcoming** (orange): before the start date
+- **Ongoing** (green): from the start date through the end date
+- **Closed** (red): after the end date
+- **No status** (gray): no dates set
+
+By default a program's status is **Automatic** and follows its dates (Philippine time).
+Anyone managing programs can override it with a fixed status from the program list or
+the program form, and switch it back to Automatic at any time.
+
+Admins can pick **Configure statuses…** at the bottom of any status dropdown to rename
+statuses, change their color or icon (from a short list), or add statuses of their own
+to set by hand. The three built-in statuses can't be removed. Programs set to a removed
+status go back to Automatic.
 
 ## Run it on your computer
 
@@ -98,7 +115,7 @@ app/
   routes/program-detail.tsx  briefer panel
   routes/admin/           admin pages
   db/schema.ts            database tables
-  lib/                    auth, data access, formatting, status icons, branding
+  lib/                    auth, data access, formatting, program status, branding
 drizzle/                  SQL migrations
 seed/                     sample data for local development
 scripts/create-user.ts    create or reset a user from the terminal

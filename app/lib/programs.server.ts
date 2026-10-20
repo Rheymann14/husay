@@ -1,52 +1,119 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, count, eq, inArray, notInArray, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { getDb, schema } from "~/db/client.server";
+import { contains, type ListParams } from "~/lib/list-params.server";
+import {
+  AUTO_STATUS_KEYS,
+  isAutoStatusKey,
+  resolveStatus,
+  statusFromDates,
+  todayInManila,
+  type StatusColor,
+  type StatusDef,
+  type StatusIcon,
+  type StatusSetting,
+} from "~/lib/status";
 
-const { programs, programLinks, programSections, statuses } = schema;
+const { programs, programLinks, programSections, programStatuses } = schema;
 
-const statusColumns = {
-  name: statuses.name,
-  color: statuses.color,
-  icon: statuses.icon,
+// By date: earliest start first, then earliest end; programs without dates last.
+const byDate = [
+  sql`${programs.startDate} is null`,
+  asc(programs.startDate),
+  sql`${programs.endDate} is null`,
+  asc(programs.endDate),
+  asc(programs.id),
+];
+
+const listColumns = {
+  id: programs.id,
+  shortName: programs.shortName,
+  title: programs.title,
+  startDate: programs.startDate,
+  endDate: programs.endDate,
+  isPublished: programs.isPublished,
+  statusSetting: programs.status,
 };
 
-/** Programs for the landing page table (published only unless includeDrafts). */
-export async function listPrograms({ includeDrafts = false } = {}) {
-  const rows = await getDb()
-    .select({
-      id: programs.id,
-      shortName: programs.shortName,
-      title: programs.title,
-      startDate: programs.startDate,
-      endDate: programs.endDate,
-      isPublished: programs.isPublished,
-      statusId: programs.statusId,
-      sortOrder: programs.sortOrder,
-      status: statusColumns,
-    })
-    .from(programs)
-    .leftJoin(statuses, eq(statuses.id, programs.statusId))
-    .where(includeDrafts ? undefined : eq(programs.isPublished, true))
-    .orderBy(asc(programs.sortOrder), asc(programs.id));
+/**
+ * Adds `status`, the one visitors see, and `autoStatus`, the key "Automatic"
+ * works out to from the dates.
+ */
+function withStatus<
+  T extends {
+    statusSetting: StatusSetting;
+    startDate: string | null;
+    endDate: string | null;
+  },
+>(row: T, statuses: StatusDef[], today = todayInManila()) {
+  return {
+    ...row,
+    status: resolveStatus(row.statusSetting, row.startDate, row.endDate, today, statuses),
+    autoStatus: statusFromDates(row.startDate, row.endDate, today),
+  };
+}
 
-  return rows.map((r) => ({ ...r, status: r.status?.name ? r.status : null }));
+/** Published programs for the landing page table. */
+export async function listPrograms() {
+  const [rows, statuses] = await Promise.all([
+    getDb()
+      .select(listColumns)
+      .from(programs)
+      .where(eq(programs.isPublished, true))
+      .orderBy(...byDate),
+    listStatuses(),
+  ]);
+  const today = todayInManila();
+  return rows.map((r) => withStatus(r, statuses, today));
 }
 
 export type ProgramListItem = Awaited<ReturnType<typeof listPrograms>>[number];
 
+/** One page of programs (drafts included) matching the search, for admins. */
+export async function searchPrograms({ query, page, pageSize }: ListParams) {
+  const db = getDb();
+  const where = query
+    ? or(contains(programs.shortName, query), contains(programs.title, query))
+    : undefined;
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(programs)
+    .where(where);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(page, pageCount);
+  const [rows, statuses] = await Promise.all([
+    db
+      .select(listColumns)
+      .from(programs)
+      .where(where)
+      .orderBy(...byDate)
+      .limit(pageSize)
+      .offset((current - 1) * pageSize),
+    listStatuses(),
+  ]);
+  const today = todayInManila();
+  return {
+    programs: rows.map((r) => withStatus(r, statuses, today)),
+    statuses,
+    total,
+    page: current,
+    pageCount,
+    pageSize,
+  };
+}
+
 /** Full program with its links and extra rows. Returns null when missing (or a draft, for the public). */
 export async function getProgram(id: number, { includeDrafts = false } = {}) {
   const db = getDb();
-  const [row] = await db
-    .select({ program: programs, status: statusColumns })
+  const [program] = await db
+    .select()
     .from(programs)
-    .leftJoin(statuses, eq(statuses.id, programs.statusId))
     .where(eq(programs.id, id))
     .limit(1);
-  if (!row || (!includeDrafts && !row.program.isPublished)) return null;
+  if (!program || (!includeDrafts && !program.isPublished)) return null;
 
-  const [links, sections] = await Promise.all([
+  const [links, sections, statuses] = await Promise.all([
     db
       .select()
       .from(programLinks)
@@ -57,11 +124,12 @@ export async function getProgram(id: number, { includeDrafts = false } = {}) {
       .from(programSections)
       .where(eq(programSections.programId, id))
       .orderBy(asc(programSections.sortOrder), asc(programSections.id)),
+    listStatuses(),
   ]);
 
+  const { status: statusSetting, ...rest } = program;
   return {
-    ...row.program,
-    status: row.status?.name ? row.status : null,
+    ...withStatus({ ...rest, statusSetting }, statuses),
     links,
     sections,
   };
@@ -126,10 +194,10 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
   return programId;
 }
 
-export async function setProgramStatus(id: number, statusId: number | null) {
+export async function setProgramStatus(id: number, status: StatusSetting) {
   await getDb()
     .update(programs)
-    .set({ statusId, updatedAt: sql`CURRENT_TIMESTAMP` })
+    .set({ status, updatedAt: sql`CURRENT_TIMESTAMP` })
     .where(eq(programs.id, id));
 }
 
@@ -137,16 +205,72 @@ export async function deleteProgram(id: number) {
   await getDb().delete(programs).where(eq(programs.id, id));
 }
 
-export async function nextProgramSortOrder() {
-  const [row] = await getDb()
-    .select({ max: sql<number>`coalesce(max(${programs.sortOrder}), 0)` })
-    .from(programs);
-  return (row?.max ?? 0) + 1;
+/** Built-in statuses first, then the ones admins added, in their saved order. */
+export async function listStatuses(): Promise<StatusDef[]> {
+  return getDb()
+    .select({
+      key: programStatuses.key,
+      name: programStatuses.name,
+      color: programStatuses.color,
+      icon: programStatuses.icon,
+    })
+    .from(programStatuses)
+    .orderBy(asc(programStatuses.sortOrder), asc(programStatuses.key));
 }
 
-export async function listStatuses() {
-  return getDb()
-    .select()
-    .from(statuses)
-    .orderBy(asc(statuses.sortOrder), asc(statuses.id));
+/** "auto", "none" or the key of an existing status. */
+export async function isValidStatusSetting(setting: string) {
+  if (setting === "auto" || setting === "none") return true;
+  return (await listStatuses()).some((s) => s.key === setting);
+}
+
+export type StatusInput = {
+  /** null for a new status. */
+  key: string | null;
+  name: string;
+  color: StatusColor;
+  icon: StatusIcon;
+};
+
+/**
+ * Replaces the status list with `input`, in that order. Built-in statuses
+ * are never removed. Programs set to a removed status go back to Automatic.
+ */
+export async function saveStatuses(input: StatusInput[]) {
+  const db = getDb();
+  const rows = input.map((s, i) => ({
+    key: s.key ?? `custom-${crypto.randomUUID().slice(0, 8)}`,
+    name: s.name,
+    color: s.color,
+    icon: s.icon,
+    sortOrder: i + 1,
+  }));
+  const keep = [...AUTO_STATUS_KEYS, ...rows.map((r) => r.key)];
+  const removed = (await listStatuses())
+    .map((s) => s.key)
+    .filter((key) => !isAutoStatusKey(key) && !keep.includes(key));
+
+  const writes: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
+    db.delete(programStatuses).where(notInArray(programStatuses.key, keep)),
+  ];
+  if (removed.length) {
+    writes.push(
+      db
+        .update(programs)
+        .set({ status: "auto", updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(inArray(programs.status, removed)),
+    );
+  }
+  for (const row of rows) {
+    writes.push(
+      db
+        .insert(programStatuses)
+        .values(row)
+        .onConflictDoUpdate({
+          target: programStatuses.key,
+          set: { name: row.name, color: row.color, icon: row.icon, sortOrder: row.sortOrder },
+        }),
+    );
+  }
+  await db.batch(writes);
 }

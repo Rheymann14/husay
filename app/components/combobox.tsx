@@ -33,6 +33,8 @@ type Props = {
   size?: "sm" | "md";
   /** Width and spacing of the trigger. Defaults to full width. */
   className?: string;
+  /** An action under the options, e.g. "Configure statuses…". */
+  footer?: { label: string; icon?: ReactNode; onSelect: () => void };
   id?: string;
   "aria-label"?: string;
 };
@@ -58,6 +60,7 @@ export function Combobox({
   disabled = false,
   size = "md",
   className = "w-full",
+  footer,
   id,
   "aria-label": ariaLabel,
 }: Props) {
@@ -174,7 +177,8 @@ export function Combobox({
         close();
         break;
       case "Tab":
-        close(false);
+        // With a footer action, Tab moves on to it instead of closing.
+        if (!footer || e.shiftKey) close(false);
         break;
     }
   };
@@ -306,6 +310,31 @@ export function Combobox({
                 })
               )}
             </ul>
+            {footer && (
+              <div className="border-t border-slate-100 p-1">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    close(false);
+                    footer.onSelect();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      close();
+                    } else if (e.key === "Tab") {
+                      close(false);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm font-medium text-navy-700 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                >
+                  {footer.icon}
+                  {footer.label}
+                </button>
+              </div>
+            )}
           </div>,
           document.body,
         )}

@@ -28,9 +28,7 @@ export async function loader({ params }: Route.LoaderArgs) {
   const id = Number(params.programId);
   const program = Number.isInteger(id) ? await getProgram(id) : null;
   if (!program) throw data("Program not found", { status: 404 });
-  // Funding is internal and never sent to the public page.
-  const { fundingCentavos: _funding, ...publicProgram } = program;
-  return { program: publicProgram };
+  return { program };
 }
 
 /** One row of the two-column briefer table: label on the left, content on the right. */

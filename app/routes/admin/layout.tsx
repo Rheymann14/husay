@@ -16,10 +16,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const tabs = [
     { to: "/admin", label: "Programs", end: true },
     ...(user.role === "admin"
-      ? [
-          { to: "/admin/statuses", label: "Statuses", end: false },
-          { to: "/admin/users", label: "Users", end: false },
-        ]
+      ? [{ to: "/admin/users", label: "Users", end: false }]
       : []),
     { to: "/admin/account", label: "My account", end: false },
   ];
