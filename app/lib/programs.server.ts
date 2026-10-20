@@ -68,13 +68,46 @@ function withStatus<
   };
 }
 
+export const PROGRAM_SORT_KEYS = [
+  "no",
+  "provider",
+  "title",
+  "duration",
+  "status",
+] as const;
+export type ProgramSortKey = (typeof PROGRAM_SORT_KEYS)[number];
+export type ProgramSort = { key: ProgramSortKey; dir: "asc" | "desc" };
+
+/** Reads ?sort= and ?dir=. No. ascending (by date) is the default. */
+export function getProgramSort(request: Request): ProgramSort {
+  const url = new URL(request.url);
+  const key = url.searchParams.get("sort") ?? "";
+  return {
+    key: (PROGRAM_SORT_KEYS as readonly string[]).includes(key)
+      ? (key as ProgramSortKey)
+      : "no",
+    dir: url.searchParams.get("dir") === "desc" ? "desc" : "asc",
+  };
+}
+
+const byText = (a: string, b: string) =>
+  a.localeCompare(b, "en", { sensitivity: "base", numeric: true });
+
+/** A date compare that keeps "To be announced" last either way. */
+const byDateValue = (a: string | null, b: string | null, dir: number) =>
+  a === b ? 0 : a == null ? 1 : b == null ? -1 : dir * byText(a, b);
+
 /**
  * One page of programs matching the search. Admins see drafts too; the
- * landing page passes `publishedOnly`.
+ * landing page passes `publishedOnly`. Each program's `no` is its place in
+ * the date order, so it stays with the program when the list is re-sorted.
  */
 export async function searchPrograms(
   { query, page, pageSize }: ListParams,
-  { publishedOnly = false } = {},
+  {
+    publishedOnly = false,
+    sort = { key: "no", dir: "asc" },
+  }: { publishedOnly?: boolean; sort?: ProgramSort } = {},
 ) {
   const db = getDb();
   const where = and(
@@ -89,19 +122,47 @@ export async function searchPrograms(
     .where(where);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const current = Math.min(page, pageCount);
+  const offset = (current - 1) * pageSize;
+  const byDefault = sort.key === "no" && sort.dir === "asc";
+
+  // The default order pages in the database. Any other order needs every
+  // match (status is worked out from the dates), so it pages here instead.
+  const select = db
+    .select(listColumns)
+    .from(programs)
+    .where(where)
+    .orderBy(...byDate);
   const [rows, statuses] = await Promise.all([
-    db
-      .select(listColumns)
-      .from(programs)
-      .where(where)
-      .orderBy(...byDate)
-      .limit(pageSize)
-      .offset((current - 1) * pageSize),
+    byDefault ? select.limit(pageSize).offset(offset) : select,
     listStatuses(),
   ]);
   const today = todayInManila();
+  const numbered = rows.map((r, i) => ({
+    ...withStatus(r, statuses, today),
+    no: (byDefault ? offset : 0) + i + 1,
+  }));
+  if (!byDefault) {
+    const dir = sort.dir === "desc" ? -1 : 1;
+    // Statuses go in their saved order, with programs showing none last.
+    const statusRank = (s: StatusDef | null) => {
+      const i = s ? statuses.findIndex((d) => d.key === s.key) : -1;
+      return i === -1 ? statuses.length : i;
+    };
+    type Row = (typeof numbered)[number];
+    const compare: Record<ProgramSortKey, (a: Row, b: Row) => number> = {
+      no: (a, b) => dir * (a.no - b.no),
+      provider: (a, b) => dir * byText(a.shortName, b.shortName),
+      title: (a, b) => dir * byText(a.title, b.title),
+      duration: (a, b) =>
+        byDateValue(a.startDate, b.startDate, dir) ||
+        byDateValue(a.endDate, b.endDate, dir),
+      status: (a, b) => dir * (statusRank(a.status) - statusRank(b.status)),
+    };
+    // Ties keep the date order.
+    numbered.sort((a, b) => compare[sort.key](a, b) || a.no - b.no);
+  }
   return {
-    programs: rows.map((r) => withStatus(r, statuses, today)),
+    programs: byDefault ? numbered : numbered.slice(offset, offset + pageSize),
     statuses,
     total,
     page: current,
@@ -145,12 +206,18 @@ async function loadProgram(where: SQL, includeDrafts: boolean) {
 
   const { status: statusSetting, ...rest } = program;
   const withStatuses = withStatus({ ...rest, statusSetting }, statuses);
-  const closed = isProgramClosed(withStatuses.status?.key, withStatuses.autoStatus);
+  const closed = isProgramClosed(
+    withStatuses.status?.key,
+    withStatuses.autoStatus,
+  );
   return {
     ...withStatuses,
     closed,
     // `isEnabled` is the admin's toggle; `isActive` is whether visitors can use it.
-    links: links.map((link) => ({ ...link, isActive: link.isEnabled && !closed })),
+    links: links.map((link) => ({
+      ...link,
+      isActive: link.isEnabled && !closed,
+    })),
     sections,
   };
 }
@@ -305,7 +372,12 @@ export async function saveStatuses(input: StatusInput[]) {
         .values(row)
         .onConflictDoUpdate({
           target: programStatuses.key,
-          set: { name: row.name, color: row.color, icon: row.icon, sortOrder: row.sortOrder },
+          set: {
+            name: row.name,
+            color: row.color,
+            icon: row.icon,
+            sortOrder: row.sortOrder,
+          },
         }),
     );
   }

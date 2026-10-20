@@ -1,4 +1,12 @@
-import { CalendarClock, ChevronRight, Eye, SearchX } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarClock,
+  ChevronRight,
+  ChevronsUpDown,
+  Eye,
+  SearchX,
+} from "lucide-react";
 import { useState } from "react";
 import {
   Link,
@@ -7,6 +15,7 @@ import {
   useLocation,
   useNavigate,
   useParams,
+  useSearchParams,
 } from "react-router";
 
 import { ClearSearchLink, EmptyState } from "~/components/empty-state";
@@ -17,7 +26,12 @@ import { getUser } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { getListParams } from "~/lib/list-params.server";
-import { searchPrograms } from "~/lib/programs.server";
+import {
+  getProgramSort,
+  searchPrograms,
+  type ProgramSort,
+  type ProgramSortKey,
+} from "~/lib/programs.server";
 import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
@@ -30,9 +44,10 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   // A short page, so the list fits beside the briefer without scrolling.
   const params = getListParams(request, 5);
+  const sort = getProgramSort(request);
   const [{ programs, total, page, pageCount, pageSize }, user] =
     await Promise.all([
-      searchPrograms(params, { publishedOnly: true }),
+      searchPrograms(params, { publishedOnly: true, sort }),
       getUser(request),
     ]);
   return {
@@ -42,12 +57,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     pageCount,
     pageSize,
     query: params.query,
+    sort,
     signedIn: user != null,
   };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { programs, total, page, pageCount, pageSize, query, signedIn } =
+  const { programs, total, page, pageCount, pageSize, query, sort, signedIn } =
     loaderData;
   const { slug: selectedSlug } = useParams();
   const { search } = useLocation();
@@ -125,18 +141,34 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     <table className="w-full text-left text-sm">
                       <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
                         <tr>
-                          <th className="w-10 px-3 py-2">No.</th>
-                          <th className="w-32 px-3 py-2">Program</th>
-                          <th className="min-w-[12rem] px-3 py-2">
+                          <SortHeader sortKey="no" sort={sort} className="w-10">
+                            No.
+                          </SortHeader>
+                          <SortHeader
+                            sortKey="provider"
+                            sort={sort}
+                            className="w-32"
+                          >
+                            Provider
+                          </SortHeader>
+                          <SortHeader
+                            sortKey="title"
+                            sort={sort}
+                            className="min-w-[12rem]"
+                          >
                             Program Title
-                          </th>
-                          <th className="px-3 py-2">Duration of Program</th>
-                          <th className="px-3 py-2">Status</th>
+                          </SortHeader>
+                          <SortHeader sortKey="duration" sort={sort}>
+                            Duration of Program
+                          </SortHeader>
+                          <SortHeader sortKey="status" sort={sort}>
+                            Status
+                          </SortHeader>
                           <th className="w-16 px-3 py-2 text-center">View</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {programs.map((p, i) => {
+                        {programs.map((p) => {
                           const selected = p.slug === selectedSlug;
                           return (
                             <tr
@@ -151,7 +183,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                               }`}
                             >
                               <td className="px-3 py-2 text-slate-500">
-                                {(page - 1) * pageSize + i + 1}
+                                {p.no}
                               </td>
                               <td className="px-3 py-2 font-semibold text-navy-900">
                                 {p.shortName}
@@ -196,7 +228,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
                   {/* Cards for phones */}
                   <ul className="divide-y divide-slate-100 md:hidden">
-                    {programs.map((p, i) => (
+                    {programs.map((p) => (
                       <li key={p.id}>
                         <Link
                           to={programUrl(p.slug)}
@@ -205,7 +237,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                           className="flex items-start gap-2.5 px-3 py-2.5 active:bg-slate-50"
                         >
                           <span className="mt-0.5 w-6 shrink-0 text-sm text-slate-400">
-                            {(page - 1) * pageSize + i + 1}.
+                            {p.no}.
                           </span>
                           <span className="min-w-0 flex-1 space-y-0.5">
                             <span className="block font-semibold text-navy-900">
@@ -246,5 +278,65 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         {SITE.agency} · HUSAY Programs
       </footer>
     </div>
+  );
+}
+
+/**
+ * A column heading that sorts the list. Clicking it again flips the order;
+ * the page goes back to 1 and the search and open briefer are kept.
+ */
+function SortHeader({
+  sortKey,
+  sort,
+  className = "",
+  children,
+}: {
+  sortKey: ProgramSortKey;
+  sort: ProgramSort;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
+  const active = sort.key === sortKey;
+  const dir = active && sort.dir === "asc" ? "desc" : "asc";
+
+  const next = new URLSearchParams(searchParams);
+  next.delete("page");
+  next.delete("sort");
+  next.delete("dir");
+  // No. ascending is the default order, so it needs no parameters.
+  if (sortKey !== "no" || dir === "desc") next.set("sort", sortKey);
+  if (dir === "desc") next.set("dir", "desc");
+  const qs = next.toString();
+
+  const Icon = !active
+    ? ChevronsUpDown
+    : sort.dir === "asc"
+      ? ArrowUp
+      : ArrowDown;
+  return (
+    <th
+      aria-sort={
+        active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
+      }
+      className={`px-3 py-2 ${className}`}
+    >
+      <Link
+        to={qs ? `${pathname}?${qs}` : pathname}
+        preventScrollReset
+        className={`group inline-flex items-center gap-1 text-left uppercase hover:text-navy-700 ${
+          active ? "text-navy-700" : ""
+        }`}
+      >
+        {children}
+        <Icon
+          className={`size-3 shrink-0 ${
+            active ? "" : "text-slate-300 group-hover:text-slate-400"
+          }`}
+          aria-hidden
+        />
+      </Link>
+    </th>
   );
 }

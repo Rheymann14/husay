@@ -97,6 +97,7 @@ export function brieferDocument(program: BrieferProgram, origin: string) {
   <header class="letterhead">
     <img src="${origin}/logos/ched_logo.png" alt="${escapeHtml(LOGOS.ched.alt)}">
     <img src="${origin}/logos/bagong_pilipinas.png" alt="${escapeHtml(LOGOS.bagongPilipinas.alt)}">
+    <img src="${origin}/logos/achieve_logo.png" alt="${escapeHtml(LOGOS.achieve.alt)}">
     <div>
       <p class="agency">${escapeHtml(SITE.agency)}</p>
       <p class="site">${escapeHtml(SITE.name)}</p>

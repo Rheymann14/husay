@@ -21,6 +21,13 @@ export function SiteHeader({ right }: { right?: React.ReactNode }) {
             height={44}
             className="h-11 w-auto shrink-0"
           />
+          <img
+            src={LOGOS.achieve.src}
+            alt={LOGOS.achieve.alt}
+            width={55}
+            height={44}
+            className="h-11 w-auto shrink-0"
+          />
           <span className="h-7 w-px shrink-0 bg-slate-200" aria-hidden />
           <span className="min-w-0 leading-tight">
             <span className="block truncate text-base font-semibold text-navy-900 sm:text-lg">

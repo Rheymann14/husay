@@ -1,12 +1,13 @@
 // Logos shown in the site header. The full-size originals are kept in
-// public/logos/ (ched_logo.png, bagong_pilipinas.png); these are small
-// copies resized for the header.
+// public/logos/ (ched_logo.png, bagong_pilipinas.png, achieve_logo.png);
+// these are small copies resized for the header.
 export const LOGOS = {
   ched: { src: "/logos/ched.png", alt: "Commission on Higher Education logo" },
   bagongPilipinas: {
     src: "/logos/bagong-pilipinas.png",
     alt: "Bagong Pilipinas logo",
   },
+  achieve: { src: "/logos/achieve.png", alt: "ACHIEVE logo" },
 };
 
 export const SITE = {
