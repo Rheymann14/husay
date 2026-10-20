@@ -76,7 +76,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       />
 
       <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-4 sm:px-6">
-        <div className="mb-3 grid gap-4 xl:grid-cols-2">
+        <div className="mb-3 grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-base font-semibold text-navy-900">
@@ -92,7 +92,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        <div className="grid items-start gap-4 xl:grid-cols-2">
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <section
             aria-label="Programs"
             className={`overflow-hidden rounded-lg border border-slate-200 bg-white ${
@@ -121,8 +121,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
                       <tr>
                         <th className="w-10 px-3 py-2">No.</th>
-                        <th className="px-3 py-2">Program</th>
-                        <th className="px-3 py-2">Program Title</th>
+                        <th className="w-40 px-3 py-2">Program</th>
+                        <th className="min-w-[16rem] px-3 py-2">
+                          Program Title
+                        </th>
                         <th className="px-3 py-2">Duration of Program</th>
                         <th className="px-3 py-2">Status</th>
                         <th className="w-20 px-3 py-2 text-center">View</th>
@@ -149,7 +151,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                             <td className="px-3 py-2 font-semibold text-navy-900">
                               {p.shortName}
                             </td>
-                            <td className="px-3 py-2">{p.title}</td>
+                            <td className="px-3 py-2">
+                              {/* The briefer shows it in full; hover shows it here. */}
+                              <span
+                                className="line-clamp-2"
+                                data-tooltip={p.title}
+                              >
+                                {p.title}
+                              </span>
+                            </td>
                             <td className="px-3 py-2 whitespace-nowrap text-slate-600">
                               {formatDuration(p.startDate, p.endDate)}
                             </td>
