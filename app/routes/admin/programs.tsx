@@ -9,12 +9,14 @@ import { Pagination, SearchBox } from "~/components/list-controls";
 import { statusOptions } from "~/components/status-badge";
 import { useStatusSettings } from "~/components/status-settings";
 import { useResultToast, type ActionResult } from "~/components/toaster";
+import { logActivity } from "~/lib/activity.server";
+import { userContext } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { getListParams } from "~/lib/list-params.server";
 import {
   deleteProgram,
-  isValidStatusSetting,
+  listStatuses,
   searchPrograms,
   setProgramStatus,
   type ProgramListItem,
@@ -31,7 +33,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { ...(await searchPrograms(params)), query: params.query };
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
+  const user = context.get(userContext);
   const form = await request.formData();
   const intent = form.get("intent");
   const id = Number(form.get("id"));
@@ -39,14 +42,36 @@ export async function action({ request }: Route.ActionArgs) {
 
   if (intent === "set-status") {
     const status = String(form.get("status") ?? "");
-    if (!(await isValidStatusSetting(status))) {
-      throw data("Invalid status", { status: 400 });
+    const label =
+      status === "auto"
+        ? "Automatic"
+        : status === "none"
+          ? "No status"
+          : (await listStatuses()).find((s) => s.key === status)?.name;
+    if (!label) throw data("Invalid status", { status: 400 });
+    const name = await setProgramStatus(id, status);
+    if (name != null) {
+      await logActivity({
+        user,
+        action: "update",
+        entity: "program",
+        entityId: id,
+        summary: `Set status of “${name}” to ${label}`,
+      });
     }
-    await setProgramStatus(id, status);
     return { ok: true, message: "Status updated." } satisfies ActionResult;
   }
   if (intent === "delete") {
-    await deleteProgram(id);
+    const name = await deleteProgram(id);
+    if (name != null) {
+      await logActivity({
+        user,
+        action: "delete",
+        entity: "program",
+        entityId: id,
+        summary: `Deleted program “${name}”`,
+      });
+    }
     return { ok: true, message: "Program deleted." } satisfies ActionResult;
   }
   throw data("Unknown action", { status: 400 });

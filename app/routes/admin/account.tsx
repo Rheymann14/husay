@@ -15,6 +15,7 @@ import { data, Form, useNavigation } from "react-router";
 
 import { useResultToast, type ActionResult } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
+import { logActivity } from "~/lib/activity.server";
 import { getSessionId, userContext } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
 import { formatTimestamp } from "~/lib/format";
@@ -80,6 +81,13 @@ export async function action({ request, context }: Route.ActionArgs) {
       .delete(schema.sessions)
       .where(and(eq(schema.sessions.userId, me.id), ne(schema.sessions.id, currentId)));
   }
+  await logActivity({
+    user: me,
+    action: "update",
+    entity: "account",
+    entityId: me.id,
+    summary: "Changed their own password",
+  });
   return { ok: true, message: "Your password has been changed." } satisfies ActionResult;
 }
 

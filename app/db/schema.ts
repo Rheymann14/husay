@@ -113,6 +113,26 @@ export const programSections = sqliteTable(
   (t) => [index("program_sections_program_id_idx").on(t.programId)],
 );
 
+// Who added, changed or removed what. Kept cheap on the D1 free plan: the id
+// is the rowid (no AUTOINCREMENT, no extra indexes), so each entry is one row
+// written, and the newest rows are read by id without a full scan.
+export const ACTIVITY_ACTIONS = ["create", "update", "delete", "sign_in"] as const;
+export const ACTIVITY_ENTITIES = ["program", "status", "user", "account"] as const;
+
+export const activityLogs = sqliteTable("activity_logs", {
+  id: integer("id").primaryKey(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(CURRENT_TIMESTAMP)`),
+  // No foreign key, so entries stay after the user is removed.
+  userId: integer("user_id"),
+  userName: text("user_name").notNull(),
+  action: text("action", { enum: ACTIVITY_ACTIONS }).notNull(),
+  entity: text("entity", { enum: ACTIVITY_ENTITIES }).notNull(),
+  entityId: text("entity_id"),
+  summary: text("summary").notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Program = typeof programs.$inferSelect;
 export type ProgramLink = typeof programLinks.$inferSelect;

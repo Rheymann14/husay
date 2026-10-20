@@ -10,6 +10,7 @@ import { ClearSearchLink, EmptyState } from "~/components/empty-state";
 import { Pagination, SearchBox } from "~/components/list-controls";
 import { useResultToast, type ActionResult as Result } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
+import { logActivity } from "~/lib/activity.server";
 import { assertAdmin, userContext } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
 import { formatTimestamp } from "~/lib/format";
@@ -85,9 +86,17 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (!parsed.success) return fail(parsed.error.issues[0].message);
     const { password: plain, ...rest } = parsed.data;
     try {
-      await db
+      const [created] = await db
         .insert(schema.users)
-        .values({ ...rest, passwordHash: await hashPassword(plain) });
+        .values({ ...rest, passwordHash: await hashPassword(plain) })
+        .returning({ id: schema.users.id });
+      await logActivity({
+        user: me,
+        action: "create",
+        entity: "user",
+        entityId: created.id,
+        summary: `Added ${rest.role} ${rest.email}`,
+      });
     } catch (error) {
       // Drizzle wraps the D1 error, which is kept as the cause.
       const cause = error instanceof Error ? error.cause : undefined;
@@ -121,6 +130,13 @@ export async function action({ request, context }: Route.ActionArgs) {
       // Sign the user out everywhere.
       db.delete(schema.sessions).where(eq(schema.sessions.userId, id)),
     ]);
+    await logActivity({
+      user: me,
+      action: "update",
+      entity: "user",
+      entityId: id,
+      summary: `Reset the password of ${target.email}`,
+    });
     return { ok: true, message: `Password reset for ${target.email}.` } satisfies Result;
   }
 
@@ -132,6 +148,15 @@ export async function action({ request, context }: Route.ActionArgs) {
       .update(schema.users)
       .set({ role: role.data, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(eq(schema.users.id, id));
+    if (role.data !== target.role) {
+      await logActivity({
+        user: me,
+        action: "update",
+        entity: "user",
+        entityId: id,
+        summary: `Changed the role of ${target.email} to ${role.data}`,
+      });
+    }
     return { ok: true, message: `${target.email} is now ${role.data === "admin" ? "an admin" : "a manager"}.` } satisfies Result;
   }
 
@@ -145,6 +170,13 @@ export async function action({ request, context }: Route.ActionArgs) {
       if (n <= 1) return fail("At least one admin must remain.");
     }
     await db.delete(schema.users).where(eq(schema.users.id, id));
+    await logActivity({
+      user: me,
+      action: "delete",
+      entity: "user",
+      entityId: id,
+      summary: `Removed ${target.role} ${target.email}`,
+    });
     return { ok: true, message: `Removed ${target.email}.` } satisfies Result;
   }
 

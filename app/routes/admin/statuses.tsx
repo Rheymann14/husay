@@ -2,6 +2,7 @@ import { data, redirect } from "react-router";
 import { z } from "zod";
 
 import type { ActionResult } from "~/components/toaster";
+import { logActivity } from "~/lib/activity.server";
 import { assertAdmin, userContext } from "~/lib/auth.server";
 import { listStatuses, saveStatuses } from "~/lib/programs.server";
 import {
@@ -27,7 +28,8 @@ const statusSchema = z.object({
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
-  assertAdmin(context.get(userContext));
+  const me = context.get(userContext);
+  assertAdmin(me);
   const form = await request.formData();
   const fail = (error: string) =>
     data<ActionResult>({ ok: false, error }, { status: 400 });
@@ -56,6 +58,19 @@ export async function action({ request, context }: Route.ActionArgs) {
     return fail("Two statuses have the same name.");
   }
 
-  await saveStatuses(statuses);
+  const { added, changed, removed } = await saveStatuses(statuses);
+  const parts = [
+    added && `added ${added}`,
+    changed && `changed ${changed}`,
+    removed && `removed ${removed}`,
+  ].filter(Boolean);
+  if (parts.length) {
+    await logActivity({
+      user: me,
+      action: "update",
+      entity: "status",
+      summary: `Updated statuses (${parts.join(", ")})`,
+    });
+  }
   return { ok: true, message: "Statuses saved." } satisfies ActionResult;
 }

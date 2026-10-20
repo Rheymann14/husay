@@ -298,15 +298,23 @@ async function freeSlug(title: string) {
   return slug;
 }
 
+/** Returns the program's short name, or undefined when it doesn't exist. */
 export async function setProgramStatus(id: number, status: StatusSetting) {
-  await getDb()
+  const [row] = await getDb()
     .update(programs)
     .set({ status, updatedAt: sql`CURRENT_TIMESTAMP` })
-    .where(eq(programs.id, id));
+    .where(eq(programs.id, id))
+    .returning({ shortName: programs.shortName });
+  return row?.shortName;
 }
 
+/** Returns the removed program's short name, or undefined when it didn't exist. */
 export async function deleteProgram(id: number) {
-  await getDb().delete(programs).where(eq(programs.id, id));
+  const [row] = await getDb()
+    .delete(programs)
+    .where(eq(programs.id, id))
+    .returning({ shortName: programs.shortName });
+  return row?.shortName;
 }
 
 /** Built-in statuses first, then the ones admins added, in their saved order. */
@@ -350,9 +358,10 @@ export async function saveStatuses(input: StatusInput[]) {
     sortOrder: i + 1,
   }));
   const keep = [...AUTO_STATUS_KEYS, ...rows.map((r) => r.key)];
-  const removed = (await listStatuses())
-    .map((s) => s.key)
-    .filter((key) => !isAutoStatusKey(key) && !keep.includes(key));
+  const before = await listStatuses();
+  const removed = before
+    .filter((s) => !isAutoStatusKey(s.key) && !keep.includes(s.key))
+    .map((s) => s.key);
 
   const writes: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
     db.delete(programStatuses).where(notInArray(programStatuses.key, keep)),
@@ -382,4 +391,11 @@ export async function saveStatuses(input: StatusInput[]) {
     );
   }
   await db.batch(writes);
+
+  const added = input.filter((s) => s.key == null).length;
+  const changed = input.filter((s) => {
+    const old = before.find((b) => b.key === s.key);
+    return old && (old.name !== s.name || old.color !== s.color || old.icon !== s.icon);
+  }).length;
+  return { added, changed, removed: removed.length };
 }

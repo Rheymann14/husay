@@ -10,6 +10,8 @@ import { SortableItem, SortableList } from "~/components/sortable-list";
 import { statusOptions } from "~/components/status-badge";
 import { useStatusSettings } from "~/components/status-settings";
 import { useResultToast, type ActionResult } from "~/components/toaster";
+import { logActivity } from "~/lib/activity.server";
+import { userContext } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import {
@@ -88,7 +90,7 @@ const programSchema = z
     path: ["endDate"],
   });
 
-export async function action({ request, params }: Route.ActionArgs) {
+export async function action({ request, params, context }: Route.ActionArgs) {
   const id = parseId(params.programId);
   const form = await request.formData();
   const text = (name: string) => String(form.get(name) ?? "");
@@ -144,7 +146,14 @@ export async function action({ request, params }: Route.ActionArgs) {
     return data({ errors, values, result }, { status: 400 });
   }
 
-  await saveProgram(id, parsed.data);
+  const savedId = await saveProgram(id, parsed.data);
+  await logActivity({
+    user: context.get(userContext),
+    action: id == null ? "create" : "update",
+    entity: "program",
+    entityId: savedId,
+    summary: `${id == null ? "Added" : "Edited"} program “${parsed.data.shortName}”`,
+  });
   throw await redirectWithToast("/admin", {
     type: "success",
     message: `“${parsed.data.shortName}” ${id == null ? "added" : "saved"}.`,

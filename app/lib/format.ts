@@ -42,3 +42,18 @@ export function formatTimestamp(value: string): string {
   const date = new Date(`${value.replace(" ", "T")}Z`);
   return Number.isNaN(date.getTime()) ? "" : shortDate.format(date);
 }
+
+const shortDateTime = new Intl.DateTimeFormat("en-PH", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "Asia/Manila",
+});
+
+/** SQLite CURRENT_TIMESTAMP (UTC) -> "Oct 20, 2026, 11:59 AM" in Manila. */
+export function formatDateTime(value: string): string {
+  const date = new Date(`${value.replace(" ", "T")}Z`);
+  return Number.isNaN(date.getTime()) ? "" : shortDateTime.format(date);
+}

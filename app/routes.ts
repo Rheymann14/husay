@@ -29,6 +29,7 @@ export default [
       route("statuses", "routes/admin/statuses.tsx"),
       route("users", "routes/admin/users.tsx"),
       route("metrics", "routes/admin/metrics.tsx"),
+      route("activity", "routes/admin/activity.tsx"),
       route("account", "routes/admin/account.tsx"),
     ]),
   ]),

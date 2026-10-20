@@ -14,6 +14,7 @@ import { data, Form, Link, redirect, useNavigation } from "react-router";
 import { SiteHeader } from "~/components/site-header";
 import { useResultToast, type ActionResult } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
+import { logActivity } from "~/lib/activity.server";
 import { createSession, getUser, safeRedirect } from "~/lib/auth.server";
 import { LOGOS, SITE } from "~/lib/branding";
 import { verifyPassword } from "~/lib/password";
@@ -52,9 +53,17 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 
-  throw redirect(redirectTo, {
-    headers: { "Set-Cookie": await createSession(request, user.id) },
+  const cookie = await createSession(request, user.id);
+  // Only successful sign-ins are logged, so failed attempts can't use up the
+  // daily D1 write quota.
+  await logActivity({
+    user,
+    action: "sign_in",
+    entity: "account",
+    entityId: user.id,
+    summary: "Signed in",
   });
+  throw redirect(redirectTo, { headers: { "Set-Cookie": cookie } });
 }
 
 export default function Login({
