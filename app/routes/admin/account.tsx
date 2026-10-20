@@ -1,6 +1,7 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 import { data, Form, useNavigation } from "react-router";
 
+import { useResultToast, type ActionResult } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
 import { getSessionId, userContext } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
@@ -21,6 +22,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   const current = String(form.get("currentPassword") ?? "");
   const next = String(form.get("newPassword") ?? "");
   const confirm = String(form.get("confirmPassword") ?? "");
+  const fail = (error: string) =>
+    data<ActionResult>({ ok: false, error }, { status: 400 });
 
   const db = getDb();
   const [row] = await db
@@ -30,16 +33,13 @@ export async function action({ request, context }: Route.ActionArgs) {
     .limit(1);
 
   if (!row || !(await verifyPassword(current, row.passwordHash))) {
-    return data({ ok: false, message: "Your current password is incorrect." }, { status: 400 });
+    return fail("Your current password is incorrect.");
   }
   if (next.length < MIN_PASSWORD_LENGTH) {
-    return data(
-      { ok: false, message: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
-      { status: 400 },
-    );
+    return fail(`New password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
   if (next !== confirm) {
-    return data({ ok: false, message: "The new passwords do not match." }, { status: 400 });
+    return fail("The new passwords do not match.");
   }
 
   await db
@@ -53,12 +53,13 @@ export async function action({ request, context }: Route.ActionArgs) {
       .delete(schema.sessions)
       .where(and(eq(schema.sessions.userId, me.id), ne(schema.sessions.id, currentId)));
   }
-  return { ok: true, message: "Your password has been changed." };
+  return { ok: true, message: "Your password has been changed." } satisfies ActionResult;
 }
 
 export default function Account({ loaderData, actionData }: Route.ComponentProps) {
   const { user } = loaderData;
   const navigation = useNavigation();
+  useResultToast(actionData);
   return (
     <div className="mx-auto max-w-md space-y-3">
       <div>
@@ -105,14 +106,6 @@ export default function Account({ loaderData, actionData }: Route.ComponentProps
             className="input mt-1"
           />
         </label>
-        {actionData && (
-          <p
-            role="alert"
-            className={`text-sm ${actionData.ok ? "text-green-700" : "text-red-700"}`}
-          >
-            {actionData.message}
-          </p>
-        )}
         <button
           type="submit"
           disabled={navigation.state !== "idle"}

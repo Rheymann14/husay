@@ -47,14 +47,14 @@ Square images with a transparent or white background look best. They are shown i
 
 ## Writing program text
 
-The Brief Description, Duration details and Target Participants fields support simple formatting:
+Each program has four fixed fields: Program, Program Title, Duration of Program
+and Status. Everything else in the briefer (Program Provider, Brief Description,
+Target Participants, and any other row) is a row the admin adds, renames,
+reorders or removes. The built-in Duration row can be moved but not removed.
 
-```
-Paragraph text.
-
-- A bullet
-  - A sub-bullet (indent with two spaces)
-```
+Row text uses a rich text editor (bold, italic, underline, bullets, sub-bullets
+with Tab, links). Drag its bottom-right corner to resize it, or use the expand
+button to edit in full screen.
 
 ## Deploy to Cloudflare (free)
 

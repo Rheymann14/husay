@@ -22,6 +22,20 @@
       "when": 1792466597443,
       "tag": "0002_program_sections",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792467869739,
+      "tag": "0003_program_rows",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792467879314,
+      "tag": "0004_drop_fixed_briefer_columns",
+      "breakpoints": true
     }
   ]
 }

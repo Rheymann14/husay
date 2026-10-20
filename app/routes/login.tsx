@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import {
   ArrowLeft,
-  CircleAlert,
   Eye,
   EyeOff,
   LoaderCircle,
@@ -13,6 +12,7 @@ import { useState } from "react";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
 
 import { SiteHeader } from "~/components/site-header";
+import { useResultToast, type ActionResult } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
 import { createSession, getUser, safeRedirect } from "~/lib/auth.server";
 import { LOGOS, SITE } from "~/lib/branding";
@@ -47,7 +47,7 @@ export async function action({ request }: Route.ActionArgs) {
   const ok = user ? await verifyPassword(password, user.passwordHash) : false;
   if (!user || !ok) {
     return data(
-      { error: "Incorrect email or password.", email },
+      { ok: false, error: "Incorrect email or password.", email } satisfies ActionResult & { email: string },
       { status: 401 },
     );
   }
@@ -65,6 +65,7 @@ export default function Login({
   const busy = navigation.state !== "idle";
   const { redirectTo } = loaderData;
   const [showPassword, setShowPassword] = useState(false);
+  useResultToast(actionData);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -90,16 +91,6 @@ export default function Login({
 
             <Form method="post" className="mt-6 space-y-4">
               <input type="hidden" name="redirectTo" value={redirectTo} />
-
-              {actionData?.error && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-                >
-                  <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  {actionData.error}
-                </div>
-              )}
 
               <label className="block">
                 <span className="label">Email</span>

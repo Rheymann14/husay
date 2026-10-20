@@ -1,9 +1,11 @@
 import { asc, count, eq, sql } from "drizzle-orm";
 import { KeyRound, Trash2, UserPlus } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { data, useFetcher } from "react-router";
 import { z } from "zod";
 
+import { Combobox, type ComboboxOption } from "~/components/combobox";
+import { useResultToast, type ActionResult as Result } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
 import { assertAdmin, userContext } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
@@ -41,8 +43,6 @@ const createSchema = z.object({
   role: z.enum(["admin", "manager"]),
   password,
 });
-
-type Result = { ok: true; message?: string } | { ok: false; error: string };
 
 export async function action({ request, context }: Route.ActionArgs) {
   const me = context.get(userContext);
@@ -103,7 +103,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       .update(schema.users)
       .set({ role: role.data, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(eq(schema.users.id, id));
-    return { ok: true } satisfies Result;
+    return { ok: true, message: `${target.email} is now ${role.data === "admin" ? "an admin" : "a manager"}.` } satisfies Result;
   }
 
   if (intent === "delete") {
@@ -116,7 +116,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       if (n <= 1) return fail("At least one admin must remain.");
     }
     await db.delete(schema.users).where(eq(schema.users.id, id));
-    return { ok: true } satisfies Result;
+    return { ok: true, message: `Removed ${target.email}.` } satisfies Result;
   }
 
   return fail("Unknown action.");
@@ -124,24 +124,21 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 type UserRow = Route.ComponentProps["loaderData"]["users"][number];
 
-function ResultMessage({ result }: { result?: Result }) {
-  if (!result) return null;
-  return result.ok ? (
-    result.message ? (
-      <p className="text-sm text-green-700">{result.message}</p>
-    ) : null
-  ) : (
-    <p role="alert" className="text-sm text-red-700">
-      {result.error}
-    </p>
-  );
-}
+const ROLE_OPTIONS: ComboboxOption[] = [
+  { value: "manager", label: "Manager", description: "Programs only" },
+  { value: "admin", label: "Admin", description: "Programs, statuses and users" },
+];
 
 function AddUserForm() {
   const fetcher = useFetcher<Result>();
   const formRef = useRef<HTMLFormElement>(null);
+  const [formKey, setFormKey] = useState(0);
+  useResultToast(fetcher.data);
   useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.ok) formRef.current?.reset();
+    if (fetcher.state === "idle" && fetcher.data?.ok) {
+      formRef.current?.reset();
+      setFormKey((k) => k + 1);
+    }
   }, [fetcher.state, fetcher.data]);
 
   return (
@@ -163,10 +160,15 @@ function AddUserForm() {
         </label>
         <label className="block">
           <span className="label">Role</span>
-          <select name="role" defaultValue="manager" className="input mt-1">
-            <option value="manager">Manager (programs only)</option>
-            <option value="admin">Admin (programs, statuses, users)</option>
-          </select>
+          <span className="mt-1 block">
+            <Combobox
+              key={formKey}
+              name="role"
+              defaultValue="manager"
+              options={ROLE_OPTIONS}
+              searchPlaceholder="Search roles…"
+            />
+          </span>
         </label>
         <label className="block">
           <span className="label">Temporary password</span>
@@ -184,12 +186,11 @@ function AddUserForm() {
           </p>
         </label>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <ResultMessage result={fetcher.data} />
+      <div className="flex items-center justify-end gap-3">
         <button
           type="submit"
           disabled={fetcher.state !== "idle"}
-          className="btn-primary ml-auto"
+          className="btn-primary"
         >
           <UserPlus className="size-4" aria-hidden />
           Add user
@@ -203,7 +204,11 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
   const roleFetcher = useFetcher<Result>();
   const resetFetcher = useFetcher<Result>();
   const deleteFetcher = useFetcher<Result>();
-  const result = deleteFetcher.data ?? resetFetcher.data ?? roleFetcher.data;
+  useResultToast(roleFetcher.data);
+  useResultToast(resetFetcher.data);
+  useResultToast(deleteFetcher.data);
+  const pendingRole = roleFetcher.formData?.get("role");
+  const role = pendingRole != null ? String(pendingRole) : user.role;
 
   return (
     <li className="space-y-2 px-4 py-3">
@@ -214,21 +219,20 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
           </p>
           <p className="truncate text-sm text-slate-600">{user.email}</p>
         </div>
-        <roleFetcher.Form method="post">
-          <input type="hidden" name="intent" value="set-role" />
-          <input type="hidden" name="id" value={user.id} />
-          <select
-            name="role"
-            defaultValue={user.role}
-            disabled={isMe}
-            onChange={(e) => roleFetcher.submit(e.currentTarget.form)}
-            aria-label={`Role of ${user.name}`}
-            className="rounded-md border border-slate-300 bg-white py-1 pr-7 pl-2 text-sm disabled:bg-slate-50"
-          >
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
-          </select>
-        </roleFetcher.Form>
+        <Combobox
+          className="w-32"
+          options={ROLE_OPTIONS}
+          value={role}
+          disabled={isMe}
+          onChange={(next) =>
+            roleFetcher.submit(
+              { intent: "set-role", id: String(user.id), role: next },
+              { method: "post" },
+            )
+          }
+          searchPlaceholder="Search roles…"
+          aria-label={`Role of ${user.name}`}
+        />
         <button
           type="button"
           className="rounded-md p-1.5 text-slate-500 hover:bg-navy-50 hover:text-navy-800"
@@ -270,7 +274,6 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
           </deleteFetcher.Form>
         )}
       </div>
-      <ResultMessage result={result} />
     </li>
   );
 }

@@ -70,7 +70,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     <tr>
                       <th className="w-10 px-3 py-2">No.</th>
                       <th className="px-3 py-2">Program</th>
-                      <th className="px-3 py-2">Title Program</th>
+                      <th className="px-3 py-2">Program Title</th>
                       <th className="px-3 py-2">Duration of Program</th>
                       <th className="px-3 py-2">Status</th>
                       <th className="w-20 px-3 py-2 text-center">View</th>

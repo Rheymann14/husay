@@ -5,6 +5,7 @@ import { data, useFetcher } from "react-router";
 import { z } from "zod";
 
 import { StatusBadge } from "~/components/status-badge";
+import { useResultToast, type ActionResult } from "~/components/toaster";
 import { getDb, schema } from "~/db/client.server";
 import { assertAdmin, userContext } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
@@ -52,18 +53,18 @@ export async function action({ request, context }: Route.ActionArgs) {
       .where(eq(schema.programs.statusId, id));
     if (n > 0) {
       return data(
-        { ok: false as const, error: "This status is still used by programs." },
+        { ok: false, error: "This status is still used by programs." } satisfies ActionResult,
         { status: 400 },
       );
     }
     await db.delete(schema.statuses).where(eq(schema.statuses.id, id));
-    return { ok: true as const };
+    return { ok: true, message: "Status deleted." } satisfies ActionResult;
   }
 
   const parsed = statusSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) {
     return data(
-      { ok: false as const, error: parsed.error.issues[0].message },
+      { ok: false, error: parsed.error.issues[0].message } satisfies ActionResult,
       { status: 400 },
     );
   }
@@ -82,13 +83,16 @@ export async function action({ request, context }: Route.ActionArgs) {
   } catch (error) {
     if (String(error).includes("UNIQUE")) {
       return data(
-        { ok: false as const, error: "A status with that name already exists." },
+        { ok: false, error: "A status with that name already exists." } satisfies ActionResult,
         { status: 400 },
       );
     }
     throw error;
   }
-  return { ok: true as const };
+  return {
+    ok: true,
+    message: intent === "create" ? "Status added." : "Status saved.",
+  } satisfies ActionResult;
 }
 
 type StatusRow = Route.ComponentProps["loaderData"]["statuses"][number];
@@ -100,8 +104,10 @@ function StatusEditor({
   status?: StatusRow;
   nextSortOrder: number;
 }) {
-  const fetcher = useFetcher<typeof action>();
-  const deleteFetcher = useFetcher<typeof action>();
+  const fetcher = useFetcher<ActionResult>();
+  const deleteFetcher = useFetcher<ActionResult>();
+  useResultToast(fetcher.data);
+  useResultToast(deleteFetcher.data);
   const deleteFormId = useId();
   const isNew = !status;
   const [name, setName] = useState(status?.name ?? "");
@@ -120,8 +126,6 @@ function StatusEditor({
   }, [isNew, fetcher.state, fetcher.data]);
 
   const busy = fetcher.state !== "idle" || deleteFetcher.state !== "idle";
-  const result = deleteFetcher.data ?? fetcher.data;
-  const error = result && !result.ok ? result.error : null;
 
   return (
     <>
@@ -231,12 +235,6 @@ function StatusEditor({
           ))}
         </div>
       </fieldset>
-
-      {error && (
-        <p role="alert" className="text-sm text-red-700">
-          {error}
-        </p>
-      )}
 
       <div className="flex items-center justify-between gap-2">
         {status ? (

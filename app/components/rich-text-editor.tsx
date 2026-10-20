@@ -14,13 +14,16 @@ import {
   ListIndentDecrease,
   ListIndentIncrease,
   ListOrdered,
+  Maximize2,
+  Minimize2,
   Redo2,
   Underline,
   Undo2,
   Unlink,
+  X,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { toHtml } from "~/lib/rich-text";
 
@@ -32,7 +35,10 @@ type Props = {
   placeholder?: string;
 };
 
-/** WYSIWYG editor for briefer text: bold, italic, underline, lists and links. */
+/**
+ * WYSIWYG editor for briefer text: bold, italic, underline, lists and links.
+ * Drag the bottom-right corner to resize it, or expand it to full screen.
+ */
 export function RichTextEditor({ name, defaultValue = "", label, placeholder }: Props) {
   const [html, setHtml] = useState(() => toHtml(defaultValue));
 
@@ -59,7 +65,7 @@ export function RichTextEditor({ name, defaultValue = "", label, placeholder }: 
     content: html,
     editorProps: {
       attributes: {
-        class: "rich-text min-h-28 px-3 py-2 text-sm text-slate-900 focus:outline-none",
+        class: "rich-text px-3 py-2 text-sm text-slate-900 focus:outline-none",
         "aria-label": label,
         "aria-multiline": "true",
         role: "textbox",
@@ -68,16 +74,91 @@ export function RichTextEditor({ name, defaultValue = "", label, placeholder }: 
     onUpdate: ({ editor }) => setHtml(editor.isEmpty ? "" : editor.getHTML()),
   });
 
+  const [expanded, setExpanded] = useState(false);
+
+  // While full screen: Esc closes it and the page behind does not scroll.
+  useEffect(() => {
+    if (!expanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      setExpanded(false);
+    };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [expanded]);
+
+  const toggleExpanded = () => {
+    setExpanded((v) => !v);
+    editor?.commands.focus();
+  };
+
   return (
-    <div className="mt-1 overflow-hidden rounded-md border border-slate-300 bg-white focus-within:border-navy-600 focus-within:ring-2 focus-within:ring-navy-100">
-      <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
-      <input type="hidden" name={name} value={html} />
-    </div>
+    <>
+      {expanded && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/50"
+          onClick={() => setExpanded(false)}
+          aria-hidden
+        />
+      )}
+      <div
+        role={expanded ? "dialog" : undefined}
+        aria-modal={expanded || undefined}
+        aria-label={expanded ? label : undefined}
+        className={`overflow-hidden rounded-md border border-slate-300 bg-white focus-within:border-navy-600 focus-within:ring-2 focus-within:ring-navy-100 ${
+          expanded
+            ? "fixed inset-3 z-50 mx-auto flex max-w-6xl flex-col shadow-2xl sm:inset-8"
+            : "mt-1"
+        }`}
+      >
+        {expanded && (
+          <div className="flex items-center gap-3 border-b border-slate-200 px-3 py-2">
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-navy-900">
+              {label}
+            </p>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Exit full screen"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          </div>
+        )}
+        <Toolbar editor={editor} expanded={expanded} onToggleExpanded={toggleExpanded} />
+        {/* Grid rows stretch the editable area to fill the box, so clicking
+            anywhere inside it places the cursor. */}
+        <div
+          className={
+            expanded
+              ? "grid min-h-0 flex-1 overflow-y-auto"
+              : "grid min-h-28 resize-y overflow-y-auto"
+          }
+        >
+          <EditorContent editor={editor} className={`grid ${expanded ? "[&_.rich-text]:px-5 [&_.rich-text]:py-4" : ""}`} />
+        </div>
+        <input type="hidden" name={name} value={html} />
+      </div>
+    </>
   );
 }
 
-function Toolbar({ editor }: { editor: Editor | null }) {
+function Toolbar({
+  editor,
+  expanded,
+  onToggleExpanded,
+}: {
+  editor: Editor | null;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+}) {
   const state = useEditorState({
     editor,
     selector: ({ editor }) =>
@@ -131,6 +212,12 @@ function Toolbar({ editor }: { editor: Editor | null }) {
       <Divider />
       <ToolButton icon={Undo2} label="Undo (Ctrl+Z)" onClick={() => chain().undo().run()} disabled={!state?.canUndo} />
       <ToolButton icon={Redo2} label="Redo (Ctrl+Shift+Z)" onClick={() => chain().redo().run()} disabled={!state?.canRedo} />
+      <span className="ml-auto" />
+      <ToolButton
+        icon={expanded ? Minimize2 : Maximize2}
+        label={expanded ? "Exit full screen (Esc)" : "Expand to full screen"}
+        onClick={onToggleExpanded}
+      />
     </div>
   );
 }

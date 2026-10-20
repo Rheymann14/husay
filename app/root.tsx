@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import {
+  data,
   isRouteErrorResponse,
   Link,
   Links,
@@ -8,6 +10,8 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { showToast, Toaster } from "~/components/toaster";
+import { getToast } from "~/lib/toast.server";
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -27,6 +31,11 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+export async function loader({ request }: Route.LoaderArgs) {
+  const { toast, headers } = await getToast(request);
+  return data({ toast }, { headers });
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -38,6 +47,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <Toaster />
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -45,7 +55,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+export default function App({ loaderData }: Route.ComponentProps) {
+  const { toast } = loaderData;
+  useEffect(() => {
+    if (toast) showToast(toast);
+  }, [toast]);
   return <Outlet />;
 }
 

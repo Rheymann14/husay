@@ -1,7 +1,9 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { data, Link, useFetcher } from "react-router";
 
-import { StatusBadge } from "~/components/status-badge";
+import { Combobox } from "~/components/combobox";
+import { statusOptions } from "~/components/status-badge";
+import { useResultToast, type ActionResult } from "~/components/toaster";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import {
@@ -35,11 +37,11 @@ export async function action({ request }: Route.ActionArgs) {
   if (intent === "set-status") {
     const statusId = form.get("statusId");
     await setProgramStatus(id, statusId ? Number(statusId) : null);
-    return { ok: true };
+    return { ok: true, message: "Status updated." } satisfies ActionResult;
   }
   if (intent === "delete") {
     await deleteProgram(id);
-    return { ok: true };
+    return { ok: true, message: "Program deleted." } satisfies ActionResult;
   }
   throw data("Unknown action", { status: 400 });
 }
@@ -51,39 +53,33 @@ function StatusSelect({
   program: ProgramListItem;
   statuses: Status[];
 }) {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<ActionResult>();
+  useResultToast(fetcher.data);
   const pending = fetcher.formData?.get("statusId");
   const currentId =
     pending != null ? String(pending) : String(program.statusId ?? "");
-  const current = statuses.find((s) => String(s.id) === currentId) ?? null;
 
   return (
-    <div className="flex items-center gap-2">
-      <StatusBadge status={current} />
-      <fetcher.Form method="post">
-        <input type="hidden" name="intent" value="set-status" />
-        <input type="hidden" name="id" value={program.id} />
-        <select
-          name="statusId"
-          value={currentId}
-          aria-label={`Change status of ${program.shortName}`}
-          onChange={(e) => fetcher.submit(e.currentTarget.form)}
-          className="rounded-md border border-slate-300 bg-white py-1 pr-7 pl-2 text-xs"
-        >
-          <option value="">No status</option>
-          {statuses.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </fetcher.Form>
-    </div>
+    <Combobox
+      size="sm"
+      className="w-40"
+      options={statusOptions(statuses)}
+      value={currentId}
+      onChange={(statusId) =>
+        fetcher.submit(
+          { intent: "set-status", id: String(program.id), statusId },
+          { method: "post" },
+        )
+      }
+      searchPlaceholder="Search statuses…"
+      aria-label={`Change status of ${program.shortName}`}
+    />
   );
 }
 
 function DeleteButton({ program }: { program: ProgramListItem }) {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<ActionResult>();
+  useResultToast(fetcher.data);
   return (
     <fetcher.Form
       method="post"
@@ -137,8 +133,8 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
               <tr>
                 <th className="w-12 px-3 py-2">No.</th>
                 <th className="px-3 py-2">Program</th>
-                <th className="px-3 py-2">Title Program</th>
-                <th className="px-3 py-2">Duration</th>
+                <th className="px-3 py-2">Program Title</th>
+                <th className="px-3 py-2">Duration of Program</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Visibility</th>
                 <th className="w-24 px-3 py-2 text-right">Actions</th>

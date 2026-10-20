@@ -49,12 +49,12 @@ export const programs = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     shortName: text("short_name").notNull(),
     title: text("title").notNull(),
-    provider: text("provider").notNull().default(""),
-    description: text("description").notNull().default(""),
     startDate: text("start_date"),
     endDate: text("end_date"),
     durationDetails: text("duration_details").notNull().default(""),
-    targetParticipants: text("target_participants").notNull().default(""),
+    // Where the built-in Duration row sits in the briefer: the number of
+    // program_sections rows shown before it.
+    durationPosition: integer("duration_position").notNull().default(0),
     // Stored in centavos so peso amounts stay exact. Admin-only.
     fundingCentavos: integer("funding_centavos"),
     statusId: integer("status_id").references(() => statuses.id, {
@@ -83,7 +83,7 @@ export const programLinks = sqliteTable(
   (t) => [index("program_links_program_id_idx").on(t.programId)],
 );
 
-// Extra briefer rows an admin adds on top of the standard ones.
+// Briefer rows an admin adds, e.g. Program Provider or Brief Description.
 export const programSections = sqliteTable(
   "program_sections",
   {
