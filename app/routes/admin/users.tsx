@@ -148,11 +148,11 @@ function AddUserForm() {
     <fetcher.Form
       ref={formRef}
       method="post"
-      className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
     >
       <input type="hidden" name="intent" value="create" />
       <h2 className="font-semibold text-slate-900">Add a user</h2>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="label">Name</span>
           <input name="name" required className="input mt-1" />
@@ -206,7 +206,7 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
   const result = deleteFetcher.data ?? resetFetcher.data ?? roleFetcher.data;
 
   return (
-    <li className="space-y-2 p-4">
+    <li className="space-y-2 px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-medium text-slate-900">
@@ -278,15 +278,15 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
 export default function Users({ loaderData }: Route.ComponentProps) {
   const { users, meId } = loaderData;
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-3">
       <div>
-        <h1 className="text-xl font-semibold text-navy-900">Users</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-base font-semibold text-navy-900">Users</h1>
+        <p className="text-xs text-slate-500">
           Managers can add and edit programs. Admins can also manage statuses
           and users.
         </p>
       </div>
-      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm">
+      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
         {users.map((u) => (
           <UserRowView key={u.id} user={u} isMe={u.id === meId} />
         ))}

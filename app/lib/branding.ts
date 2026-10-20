@@ -1,10 +1,10 @@
-// Logos shown on the landing page header.
-// Replace the placeholder files in public/logos/ with the real logos,
-// and update the file names here if yours differ (e.g. ched.png).
+// Logos shown in the site header. The full-size originals are kept in
+// public/logos/ (ched_logo.png, bagong_pilipinas.png); these are small
+// copies resized for the header.
 export const LOGOS = {
-  ched: { src: "/logos/ched.svg", alt: "Commission on Higher Education logo" },
+  ched: { src: "/logos/ched.png", alt: "Commission on Higher Education logo" },
   bagongPilipinas: {
-    src: "/logos/bagong-pilipinas.svg",
+    src: "/logos/bagong-pilipinas.png",
     alt: "Bagong Pilipinas logo",
   },
 };

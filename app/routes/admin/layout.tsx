@@ -28,9 +28,9 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     <div className="flex min-h-dvh flex-col">
       <SiteHeader
         right={
-          <div className="hidden shrink-0 text-right text-sm sm:block">
-            <p className="font-medium">{user.name}</p>
-            <p className="text-xs text-navy-100 capitalize">{user.role}</p>
+          <div className="hidden shrink-0 text-right text-xs leading-tight sm:block">
+            <p className="font-medium text-slate-800">{user.name}</p>
+            <p className="text-[11px] text-slate-500 capitalize">{user.role}</p>
           </div>
         }
       />
@@ -42,7 +42,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               to={tab.to}
               end={tab.end}
               className={({ isActive }) =>
-                `border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap ${
+                `border-b-2 px-2.5 py-2 text-sm font-medium whitespace-nowrap ${
                   isActive
                     ? "border-navy-700 text-navy-800"
                     : "border-transparent text-slate-600 hover:text-slate-900"
@@ -57,7 +57,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               href="/"
               target="_blank"
               rel="noopener"
-              className="inline-flex items-center gap-1 px-3 py-3 text-sm whitespace-nowrap text-slate-600 hover:text-slate-900"
+              className="inline-flex items-center gap-1 px-2.5 py-2 text-sm whitespace-nowrap text-slate-600 hover:text-slate-900"
             >
               Public page
               <ExternalLink className="size-3.5" aria-hidden />
@@ -65,16 +65,16 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             <Form method="post" action="/logout">
               <button
                 type="submit"
-                className="inline-flex items-center gap-1 px-3 py-3 text-sm whitespace-nowrap text-slate-600 hover:text-red-700"
+                className="inline-flex items-center gap-1 px-2.5 py-2 text-sm whitespace-nowrap text-slate-600 hover:text-red-700"
               >
-                <LogOut className="size-4" aria-hidden />
+                <LogOut className="size-3.5" aria-hidden />
                 Sign out
               </button>
             </Form>
           </div>
         </div>
       </nav>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6">
         <Outlet />
       </main>
     </div>

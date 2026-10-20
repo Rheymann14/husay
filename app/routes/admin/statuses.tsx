@@ -141,7 +141,7 @@ function StatusEditor({
     <fetcher.Form
       ref={formRef}
       method="post"
-      className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
     >
       <input type="hidden" name="intent" value={isNew ? "create" : "update"} />
       {status && <input type="hidden" name="id" value={status.id} />}
@@ -158,7 +158,7 @@ function StatusEditor({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
+      <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
         <label className="block">
           <span className="label">Name</span>
           <input
@@ -279,10 +279,10 @@ export default function Statuses({ loaderData }: Route.ComponentProps) {
   const { statuses } = loaderData;
   const nextSortOrder = Math.max(0, ...statuses.map((s) => s.sortOrder)) + 1;
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-3">
       <div>
-        <h1 className="text-xl font-semibold text-navy-900">Statuses</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-base font-semibold text-navy-900">Statuses</h1>
+        <p className="text-xs text-slate-500">
           Statuses appear as colored badges on the program list. Change their
           name, color or icon, or add new ones.
         </p>

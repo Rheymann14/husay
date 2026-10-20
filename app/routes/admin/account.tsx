@@ -60,17 +60,17 @@ export default function Account({ loaderData, actionData }: Route.ComponentProps
   const { user } = loaderData;
   const navigation = useNavigation();
   return (
-    <div className="mx-auto max-w-md space-y-4">
+    <div className="mx-auto max-w-md space-y-3">
       <div>
-        <h1 className="text-xl font-semibold text-navy-900">My account</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-base font-semibold text-navy-900">My account</h1>
+        <p className="text-xs text-slate-500">
           {user.name} · {user.email} · <span className="capitalize">{user.role}</span>
         </p>
       </div>
       <Form
         method="post"
         key={actionData?.ok ? "done" : "form"}
-        className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+        className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
       >
         <h2 className="font-semibold text-slate-900">Change password</h2>
         <label className="block">

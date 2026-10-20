@@ -31,11 +31,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5 border-b border-slate-200 px-5 py-4 last:border-b-0">
-      <dt className="text-xs font-semibold tracking-wide text-navy-700 uppercase">
+    <div className="space-y-1 border-b border-slate-100 px-4 py-2.5 last:border-b-0">
+      <dt className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
         {label}
       </dt>
-      <dd className="text-[15px] leading-relaxed text-slate-700">{children}</dd>
+      <dd className="text-sm leading-relaxed text-slate-700">{children}</dd>
     </div>
   );
 }
@@ -63,27 +63,27 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
     />
     <aside
       aria-labelledby="program-title"
-      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[36rem] md:shadow-2xl xl:sticky xl:inset-auto xl:top-6 xl:z-auto xl:max-h-[calc(100dvh-11rem)] xl:w-auto xl:rounded-xl xl:border xl:border-slate-200 xl:shadow-sm"
+      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[36rem] md:shadow-2xl xl:sticky xl:inset-auto xl:top-4 xl:z-auto xl:max-h-[calc(100dvh-8.5rem)] xl:w-auto xl:rounded-lg xl:border xl:border-slate-200 xl:shadow-none"
     >
-      <div className="sticky top-0 z-10 flex items-start gap-3 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+      <div className="sticky top-0 z-10 flex items-start gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-widest text-gold-500 uppercase">
+          <p className="text-[11px] font-semibold tracking-widest text-gold-500 uppercase">
             Program Briefer
           </p>
           <h2
             id="program-title"
-            className="mt-0.5 text-lg leading-snug font-bold text-navy-900"
+            className="mt-0.5 text-base leading-snug font-semibold text-navy-900"
           >
             {program.title}
           </h2>
-          <div className="mt-2">
-            <StatusBadge status={program.status} size="md" />
+          <div className="mt-1.5">
+            <StatusBadge status={program.status} />
           </div>
         </div>
         <Link
           to="/"
           preventScrollReset
-          className="-mr-2 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          className="-mr-1.5 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
           aria-label="Close program details"
         >
           <X className="size-5" aria-hidden />
@@ -105,7 +105,7 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
             {formatDuration(program.startDate, program.endDate, { long: true })}
           </p>
           {program.durationDetails && (
-            <div className="mt-2">
+            <div className="mt-1.5">
               <RichText text={program.durationDetails} />
             </div>
           )}
@@ -116,7 +116,7 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
       </dl>
 
       {program.links.length > 0 && (
-        <div className="sticky bottom-0 border-t-4 border-gold-400 bg-navy-50 px-5 py-4">
+        <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur">
           <div className="flex flex-wrap gap-2">
             {program.links.map((link) => (
               <a
@@ -124,10 +124,10 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-navy-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-navy-800 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:outline-none"
+                className="inline-flex items-center gap-1.5 rounded-md bg-navy-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-800 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:outline-none"
               >
                 {link.label}
-                <ExternalLink className="size-4" aria-hidden />
+                <ExternalLink className="size-3.5" aria-hidden />
               </a>
             ))}
           </div>

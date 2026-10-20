@@ -166,7 +166,7 @@ export default function ProgramForm({
     String(program?.statusId ?? (program ? "" : (statuses[0]?.id ?? "")));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-3">
       <Link
         to="/admin"
         className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
@@ -174,14 +174,14 @@ export default function ProgramForm({
         <ArrowLeft className="size-4" aria-hidden />
         Back to programs
       </Link>
-      <h1 className="text-xl font-semibold text-navy-900">
+      <h1 className="text-base font-semibold text-navy-900">
         {program ? `Edit: ${program.shortName}` : "Add program"}
       </h1>
 
-      <Form method="post" className="space-y-6" noValidate>
-        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <Form method="post" className="space-y-3" noValidate>
+        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="font-semibold text-slate-900">Program</h2>
-          <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+          <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
             <label className="block">
               <span className="label">Program (short name) *</span>
               <input
@@ -223,9 +223,9 @@ export default function ProgramForm({
           </label>
         </section>
 
-        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="font-semibold text-slate-900">Duration</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="label">Start date</span>
               <input
@@ -263,7 +263,7 @@ export default function ProgramForm({
           </label>
         </section>
 
-        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="font-semibold text-slate-900">
             Description / Profile of Target Participants
           </h2>
@@ -279,11 +279,11 @@ export default function ProgramForm({
           </label>
         </section>
 
-        <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold text-slate-900">Application links</h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-xs text-slate-500">
                 Shown as buttons at the bottom of the briefer, e.g. “Apply Here”.
               </p>
             </div>
@@ -344,9 +344,9 @@ export default function ProgramForm({
           )}
         </section>
 
-        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="font-semibold text-slate-900">Status and display</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <label className="block">
               <span className="label">Status</span>
               <select

@@ -28,7 +28,7 @@ Requires Node.js 22 or newer.
 npm install
 npm run db:migrate:local      # create the local database tables
 npm run db:seed:local         # optional: add the sample program from the Annex A briefer
-npm run user:create -- --email you@ched.gov.ph --name "Your Name"
+npm run user:create            # asks for your email, name and password
 npm run dev
 ```
 
@@ -73,7 +73,7 @@ Paragraph text.
    ```
 4. Create your admin account in the online database:
    ```bash
-   npm run user:create -- --email you@ched.gov.ph --name "Your Name" --remote
+   npm run user:create:remote
    ```
 5. Deploy:
    ```bash

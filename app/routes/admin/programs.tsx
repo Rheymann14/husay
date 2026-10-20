@@ -112,11 +112,11 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
   const { programs, statuses } = loaderData;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-navy-900">Programs</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-base font-semibold text-navy-900">Programs</h1>
+          <p className="text-xs text-slate-500">
             Add, edit and change the status of HUSAY programs.
           </p>
         </div>
@@ -126,39 +126,39 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
         </Link>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         {programs.length === 0 ? (
           <p className="p-8 text-center text-slate-500">
             No programs yet. Click “Add program” to create the first one.
           </p>
         ) : (
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-navy-50 text-xs font-semibold tracking-wide text-navy-800 uppercase">
+            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
               <tr>
-                <th className="w-12 px-4 py-3">No.</th>
-                <th className="px-4 py-3">Program</th>
-                <th className="px-4 py-3">Title Program</th>
-                <th className="px-4 py-3">Duration</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Visibility</th>
-                <th className="w-24 px-4 py-3 text-right">Actions</th>
+                <th className="w-12 px-3 py-2">No.</th>
+                <th className="px-3 py-2">Program</th>
+                <th className="px-3 py-2">Title Program</th>
+                <th className="px-3 py-2">Duration</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Visibility</th>
+                <th className="w-24 px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {programs.map((p, i) => (
                 <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-500">{i + 1}</td>
-                  <td className="px-4 py-3 font-semibold text-navy-900">
+                  <td className="px-3 py-2 text-slate-500">{i + 1}</td>
+                  <td className="px-3 py-2 font-semibold text-navy-900">
                     {p.shortName}
                   </td>
-                  <td className="px-4 py-3">{p.title}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                  <td className="px-3 py-2">{p.title}</td>
+                  <td className="px-3 py-2 whitespace-nowrap text-slate-600">
                     {formatDuration(p.startDate, p.endDate)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <StatusSelect program={p} statuses={statuses} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     {p.isPublished ? (
                       <span className="text-xs font-medium text-green-700">
                         Published
@@ -169,7 +169,7 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
                       <Link
                         to={`/admin/programs/${p.id}/edit`}

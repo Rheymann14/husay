@@ -14,7 +14,8 @@
     "db:migrate:local": "wrangler d1 migrations apply husay-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply husay-db --remote",
     "db:seed:local": "wrangler d1 execute husay-db --local --file seed/sample-program.sql",
-    "user:create": "node scripts/create-user.ts"
+    "user:create": "node scripts/create-user.ts",
+    "user:create:remote": "node scripts/create-user.ts --remote"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

@@ -57,16 +57,16 @@ export default function Login({
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
-      <main className="flex flex-1 items-start justify-center px-4 py-12">
-        <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-xl font-semibold text-navy-900">
+      <main className="flex flex-1 items-start justify-center px-4 py-10">
+        <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-5">
+          <h1 className="text-base font-semibold text-navy-900">
             Program manager sign in
           </h1>
           <p className="mt-1 text-sm text-slate-600">
             For CHED staff who manage HUSAY programs.
           </p>
 
-          <Form method="post" className="mt-6 space-y-4">
+          <Form method="post" className="mt-4 space-y-3">
             <input type="hidden" name="redirectTo" value={redirectTo} />
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Email</span>
