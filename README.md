@@ -92,11 +92,13 @@ button to edit in full screen.
    ```bash
    npm run user:create:remote
    ```
-5. Deploy:
+5. Create the Cloudflare Pages project (once), then deploy:
    ```bash
+   npx wrangler pages project create husay --production-branch main --force
    npm run deploy
    ```
-   The site is published at `https://husay.<your-subdomain>.workers.dev`.
+   The site is published at `https://husay.pages.dev`. `--force` makes it a real
+   Pages project; without it Wrangler makes a Worker at `husay.<account>.workers.dev`.
 
 To publish later changes, run `npm run deploy` again.
 

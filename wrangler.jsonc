@@ -16,7 +16,7 @@
 		{
 			"binding": "DB",
 			"database_name": "husay-db",
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			"database_id": "cc643ee1-509a-4cbb-9e1d-046deacd51da",
 			"migrations_dir": "drizzle"
 		}
 	],
