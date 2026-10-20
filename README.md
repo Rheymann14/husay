@@ -16,6 +16,7 @@ Built with React Router (full-stack React + TypeScript) on Cloudflare Workers, w
 **Admin area (`/admin`, sign-in required)**
 - **Programs**: search, add, edit, delete, change status, publish or hide, add or remove application link rows
 - **Users** (admins only): search, add managers or admins, reset passwords, change roles, remove users
+- **Metrics** (admins only): Cloudflare free plan usage — requests, database rows read and written today, database size, and the last 7 days (see [Usage metrics](#usage-metrics))
 - **My account**: change your own password
 
 There is no public sign-up. Managers can manage programs; admins can also manage users and statuses.
@@ -102,6 +103,27 @@ button to edit in full screen.
    Pages project; without it Wrangler makes a Worker at `husay.<account>.workers.dev`.
 
 To publish later changes, run `npm run deploy` again.
+
+## Usage metrics
+
+The admin **Metrics** tab compares today's usage with the free plan limits
+(100,000 requests, 5 million database rows read and 100,000 rows written a day,
+500 MB per database). Daily limits are for the whole Cloudflare account and
+reset at 8:00 AM Philippine time.
+
+The database size shows on its own. Requests and rows need a Cloudflare API token:
+
+1. In the Cloudflare dashboard, go to My Profile → API Tokens → Create Token,
+   and make a custom token with **Account → Account Analytics → Read**.
+2. Copy your Account ID from the Workers & Pages overview.
+3. Add both to the site and deploy again:
+   ```bash
+   npx wrangler pages secret put CLOUDFLARE_ACCOUNT_ID --project-name husay
+   npx wrangler pages secret put CLOUDFLARE_API_TOKEN --project-name husay
+   npm run deploy
+   ```
+
+For local development, copy `.dev.vars.example` to `.dev.vars` and fill it in.
 
 ## Changing the database
 
