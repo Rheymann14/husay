@@ -1,6 +1,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  BookOpen,
   CalendarClock,
   ChevronRight,
   ChevronsUpDown,
@@ -107,6 +108,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               )}
             </div>
             {!nothingPosted && <SearchBox placeholder="Search programs…" />}
+          </div>
+          <div className="flex items-end justify-end">
+            <a
+              href="https://online.fliphtml5.com/cggom/qufn/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-2 rounded-md border border-navy-100 bg-white px-3 py-1.5 text-sm font-medium text-navy-700 shadow-sm hover:bg-navy-50"
+            >
+              <BookOpen className="size-4" aria-hidden />
+              About HUSAY
+            </a>
           </div>
         </div>
 
