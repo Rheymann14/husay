@@ -28,7 +28,8 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const params = getListParams(request);
+  // A short page, so the list fits beside the briefer without scrolling.
+  const params = getListParams(request, 5);
   const [{ programs, total, page, pageCount, pageSize }, user] =
     await Promise.all([
       searchPrograms(params, { publishedOnly: true }),
@@ -96,133 +97,137 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <div className="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)]">
           <section
             aria-label="Programs"
-            className={`overflow-hidden rounded-lg border border-slate-200 bg-white xl:max-h-full xl:overflow-y-auto ${
+            className={`overflow-hidden rounded-lg border border-slate-200 bg-white xl:flex xl:max-h-full xl:flex-col ${
               nothingPosted ? "xl:col-span-2" : ""
             }`}
           >
-            {nothingPosted ? (
-              <EmptyState
-                size="lg"
-                icon={CalendarClock}
-                title="No programs posted yet"
-                description="HUSAY programs will be listed here once they are announced, each with a briefer and how to apply. Please check back soon."
-              />
-            ) : programs.length === 0 ? (
-              <EmptyState
-                icon={SearchX}
-                title={`No programs match “${query}”`}
-                description="Check the spelling or try a different word."
-                action={<ClearSearchLink />}
-              />
-            ) : (
-              <>
-                {/* Table for tablets and up */}
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
-                      <tr>
-                        <th className="w-10 px-3 py-2">No.</th>
-                        <th className="w-32 px-3 py-2">Program</th>
-                        <th className="min-w-[12rem] px-3 py-2">
-                          Program Title
-                        </th>
-                        <th className="px-3 py-2">Duration of Program</th>
-                        <th className="px-3 py-2">Status</th>
-                        <th className="w-16 px-3 py-2 text-center">View</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {programs.map((p, i) => {
-                        const selected = p.slug === selectedSlug;
-                        return (
-                          <tr
-                            key={p.id}
-                            onClick={() => open(p.slug)}
-                            onMouseEnter={() => setHoveredSlug(p.slug)}
-                            aria-selected={selected}
-                            className={`cursor-pointer transition-colors ${
-                              selected
-                                ? "bg-navy-50 shadow-[inset_4px_0_0_var(--color-gold-500)]"
-                                : "hover:bg-slate-50"
-                            }`}
-                          >
-                            <td className="px-3 py-2 text-slate-500">
-                              {(page - 1) * pageSize + i + 1}
-                            </td>
-                            <td className="px-3 py-2 font-semibold text-navy-900">
-                              {p.shortName}
-                            </td>
-                            <td className="px-3 py-2">
-                              {/* The briefer shows it in full; hover shows it here. */}
-                              <span
-                                className="line-clamp-3"
-                                data-tooltip={p.title}
-                              >
-                                {p.title}
-                              </span>
-                            </td>
-                            <td className="min-w-[7rem] px-3 py-2 text-slate-600">
-                              {formatDuration(p.startDate, p.endDate)}
-                            </td>
-                            <td className="px-3 py-2">
-                              <StatusBadge status={p.status} />
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <Link
-                                to={programUrl(p.slug)}
-                                preventScrollReset
-                                prefetch="intent"
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-navy-700 hover:bg-navy-50"
-                                aria-label={`View ${p.title}`}
-                              >
-                                <Eye className="size-3.5" aria-hidden />
-                                View
-                              </Link>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {hoveredSlug != null && hoveredSlug !== selectedSlug && (
-                    <PrefetchPageLinks page={programUrl(hoveredSlug)} />
-                  )}
-                </div>
+            {/* Pages are short enough to fit; scrolling is only a fallback for
+                very short windows, and the pager below always stays in view. */}
+            <div className="xl:min-h-0 xl:overflow-y-auto">
+              {nothingPosted ? (
+                <EmptyState
+                  size="lg"
+                  icon={CalendarClock}
+                  title="No programs posted yet"
+                  description="HUSAY programs will be listed here once they are announced, each with a briefer and how to apply. Please check back soon."
+                />
+              ) : programs.length === 0 ? (
+                <EmptyState
+                  icon={SearchX}
+                  title={`No programs match “${query}”`}
+                  description="Check the spelling or try a different word."
+                  action={<ClearSearchLink />}
+                />
+              ) : (
+                <>
+                  {/* Table for tablets and up */}
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+                        <tr>
+                          <th className="w-10 px-3 py-2">No.</th>
+                          <th className="w-32 px-3 py-2">Program</th>
+                          <th className="min-w-[12rem] px-3 py-2">
+                            Program Title
+                          </th>
+                          <th className="px-3 py-2">Duration of Program</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="w-16 px-3 py-2 text-center">View</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {programs.map((p, i) => {
+                          const selected = p.slug === selectedSlug;
+                          return (
+                            <tr
+                              key={p.id}
+                              onClick={() => open(p.slug)}
+                              onMouseEnter={() => setHoveredSlug(p.slug)}
+                              aria-selected={selected}
+                              className={`cursor-pointer transition-colors ${
+                                selected
+                                  ? "bg-navy-50 shadow-[inset_4px_0_0_var(--color-gold-500)]"
+                                  : "hover:bg-slate-50"
+                              }`}
+                            >
+                              <td className="px-3 py-2 text-slate-500">
+                                {(page - 1) * pageSize + i + 1}
+                              </td>
+                              <td className="px-3 py-2 font-semibold text-navy-900">
+                                {p.shortName}
+                              </td>
+                              <td className="px-3 py-2">
+                                {/* The briefer shows it in full; hover shows it here. */}
+                                <span
+                                  className="line-clamp-3"
+                                  data-tooltip={p.title}
+                                >
+                                  {p.title}
+                                </span>
+                              </td>
+                              <td className="min-w-[7rem] px-3 py-2 text-slate-600">
+                                {formatDuration(p.startDate, p.endDate)}
+                              </td>
+                              <td className="px-3 py-2">
+                                <StatusBadge status={p.status} />
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <Link
+                                  to={programUrl(p.slug)}
+                                  preventScrollReset
+                                  prefetch="intent"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-navy-700 hover:bg-navy-50"
+                                  aria-label={`View ${p.title}`}
+                                >
+                                  <Eye className="size-3.5" aria-hidden />
+                                  View
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    {hoveredSlug != null && hoveredSlug !== selectedSlug && (
+                      <PrefetchPageLinks page={programUrl(hoveredSlug)} />
+                    )}
+                  </div>
 
-                {/* Cards for phones */}
-                <ul className="divide-y divide-slate-100 md:hidden">
-                  {programs.map((p, i) => (
-                    <li key={p.id}>
-                      <Link
-                        to={programUrl(p.slug)}
-                        preventScrollReset
-                        prefetch="intent"
-                        className="flex items-start gap-2.5 px-3 py-2.5 active:bg-slate-50"
-                      >
-                        <span className="mt-0.5 w-6 shrink-0 text-sm text-slate-400">
-                          {(page - 1) * pageSize + i + 1}.
-                        </span>
-                        <span className="min-w-0 flex-1 space-y-0.5">
-                          <span className="block font-semibold text-navy-900">
-                            {p.shortName}
+                  {/* Cards for phones */}
+                  <ul className="divide-y divide-slate-100 md:hidden">
+                    {programs.map((p, i) => (
+                      <li key={p.id}>
+                        <Link
+                          to={programUrl(p.slug)}
+                          preventScrollReset
+                          prefetch="intent"
+                          className="flex items-start gap-2.5 px-3 py-2.5 active:bg-slate-50"
+                        >
+                          <span className="mt-0.5 w-6 shrink-0 text-sm text-slate-400">
+                            {(page - 1) * pageSize + i + 1}.
                           </span>
-                          <span className="block text-sm">{p.title}</span>
-                          <span className="block text-xs text-slate-500">
-                            {formatDuration(p.startDate, p.endDate)}
+                          <span className="min-w-0 flex-1 space-y-0.5">
+                            <span className="block font-semibold text-navy-900">
+                              {p.shortName}
+                            </span>
+                            <span className="block text-sm">{p.title}</span>
+                            <span className="block text-xs text-slate-500">
+                              {formatDuration(p.startDate, p.endDate)}
+                            </span>
+                            <StatusBadge status={p.status} />
                           </span>
-                          <StatusBadge status={p.status} />
-                        </span>
-                        <ChevronRight
-                          className="mt-1 size-5 shrink-0 text-slate-400"
-                          aria-hidden
-                        />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+                          <ChevronRight
+                            className="mt-1 size-5 shrink-0 text-slate-400"
+                            aria-hidden
+                          />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
             <Pagination
               page={page}
               pageCount={pageCount}
