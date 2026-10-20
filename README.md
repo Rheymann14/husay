@@ -1,79 +1,105 @@
-# Welcome to React Router!
+# HUSAY Programs
 
-A modern, production-ready template for building full-stack React applications using React Router.
+Public list of CHED HUSAY programs with a briefer for each, and a signed-in area where staff manage programs, statuses and users.
 
-## Features
+Built with React Router (full-stack React + TypeScript) on Cloudflare Workers, with a Cloudflare D1 (SQLite) database and Drizzle ORM.
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+## What's in it
 
-## Getting Started
+**Public page (`/`)**
+- Table of programs: No., Program, Title Program, Duration of Program, Status, View
+- Click a row to open the program briefer in a panel on the right (full screen on phones)
+- Application links (for example “Apply Here”) at the bottom of the briefer
+- CHED and Bagong Pilipinas logos in the header
 
-### Installation
+**Admin area (`/admin`, sign-in required)**
+- **Programs**: add, edit, delete, change status, publish or hide, set list order, add or remove application link rows
+- **Statuses** (admins only): edit the name, color and icon of Ongoing and Closed, or add new statuses
+- **Users** (admins only): add managers or admins, reset passwords, change roles, remove users
+- **My account**: change your own password
 
-Install the dependencies:
+There is no public sign-up. Managers can manage programs; admins can also manage statuses and users.
+
+## Run it on your computer
+
+Requires Node.js 22 or newer.
 
 ```bash
 npm install
-```
-
-### Development
-
-Start the development server with HMR:
-
-```bash
+npm run db:migrate:local      # create the local database tables
+npm run db:seed:local         # optional: add the sample program from the Annex A briefer
+npm run user:create -- --email you@ched.gov.ph --name "Your Name"
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+Open http://localhost:5173. Sign in at http://localhost:5173/login.
 
-## Previewing the Production Build
+## Add the logos
 
-Preview the production build locally:
+Put the logo files in `public/logos/`, then set their file names in `app/lib/branding.ts`:
 
-```bash
-npm run preview
+```ts
+ched: { src: "/logos/ched.png", ... },
+bagongPilipinas: { src: "/logos/bagong-pilipinas.png", ... },
 ```
 
-## Building for Production
+Square images with a transparent or white background look best. They are shown in a circle.
 
-Create a production build:
+## Writing program text
 
-```bash
-npm run build
+The Brief Description, Duration details and Target Participants fields support simple formatting:
+
+```
+Paragraph text.
+
+- A bullet
+  - A sub-bullet (indent with two spaces)
 ```
 
-## Deployment
+## Deploy to Cloudflare (free)
 
-Deployment is done using the Wrangler CLI.
+1. Create a free Cloudflare account, then sign in from the terminal:
+   ```bash
+   npx wrangler login
+   ```
+2. Create the database:
+   ```bash
+   npx wrangler d1 create husay-db
+   ```
+   Copy the `database_id` it prints into `wrangler.jsonc` (replace the `00000000-…` placeholder).
+3. Create the tables in the online database:
+   ```bash
+   npm run db:migrate:remote
+   ```
+4. Create your admin account in the online database:
+   ```bash
+   npm run user:create -- --email you@ched.gov.ph --name "Your Name" --remote
+   ```
+5. Deploy:
+   ```bash
+   npm run deploy
+   ```
+   The site is published at `https://husay.<your-subdomain>.workers.dev`.
 
-To build and deploy directly to production:
+To publish later changes, run `npm run deploy` again.
 
-```sh
-npm run deploy
+## Changing the database
+
+1. Edit `app/db/schema.ts`
+2. `npm run db:generate` to create a migration in `drizzle/`
+3. `npm run db:migrate:local`, and `npm run db:migrate:remote` before deploying
+
+## Project layout
+
 ```
-
-To deploy a preview URL:
-
-```sh
-npx wrangler versions upload
+app/
+  routes.ts               route list
+  routes/home.tsx         public program list
+  routes/program-detail.tsx  briefer panel
+  routes/admin/           admin pages
+  db/schema.ts            database tables
+  lib/                    auth, data access, formatting, status icons, branding
+drizzle/                  SQL migrations
+seed/                     sample data for local development
+scripts/create-user.ts    create or reset a user from the terminal
 ```
-
-You can then promote a version to production after verification or roll it out progressively.
-
-```sh
-npx wrangler versions deploy
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.

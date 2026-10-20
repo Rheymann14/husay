@@ -7,9 +7,19 @@
 	"name": "husay",
 	"compatibility_date": "2026-10-19",
 	"main": "./workers/app.ts",
-	"vars": {
-		"VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare"
-	},
+	/**
+	 * D1 database. For local development the database_id can stay as is.
+	 * Before deploying, run `npx wrangler d1 create husay-db` and paste the
+	 * returned database_id here.
+	 */
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "husay-db",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "drizzle"
+		}
+	],
 	"observability": {
 		"enabled": true
 	},

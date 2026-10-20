@@ -9,13 +9,21 @@
     "deploy": "npm run build && wrangler deploy",
     "preview": "npm run build && vite preview",
     "cf-typegen": "wrangler types",
-    "postinstall": "wrangler types"
+    "postinstall": "wrangler types",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply husay-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply husay-db --remote",
+    "db:seed:local": "wrangler d1 execute husay-db --local --file seed/sample-program.sql",
+    "user:create": "node scripts/create-user.ts"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.4",
     "isbot": "^5.1.36",
+    "lucide-react": "^1.59.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router": "^8.4.0"
+    "react-router": "^8.4.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.64.0",
@@ -24,6 +32,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "drizzle-kit": "^0.31.11",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
     "vite": "^8.0.3",
