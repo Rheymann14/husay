@@ -1,8 +1,9 @@
 import { asc, eq, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 
 import { getDb, schema } from "~/db/client.server";
 
-const { programs, programLinks, statuses } = schema;
+const { programs, programLinks, programSections, statuses } = schema;
 
 const statusColumns = {
   name: statuses.name,
@@ -34,7 +35,7 @@ export async function listPrograms({ includeDrafts = false } = {}) {
 
 export type ProgramListItem = Awaited<ReturnType<typeof listPrograms>>[number];
 
-/** Full program with its links. Returns null when missing (or a draft, for the public). */
+/** Full program with its links and extra rows. Returns null when missing (or a draft, for the public). */
 export async function getProgram(id: number, { includeDrafts = false } = {}) {
   const db = getDb();
   const [row] = await db
@@ -45,27 +46,38 @@ export async function getProgram(id: number, { includeDrafts = false } = {}) {
     .limit(1);
   if (!row || (!includeDrafts && !row.program.isPublished)) return null;
 
-  const links = await db
-    .select()
-    .from(programLinks)
-    .where(eq(programLinks.programId, id))
-    .orderBy(asc(programLinks.sortOrder), asc(programLinks.id));
+  const [links, sections] = await Promise.all([
+    db
+      .select()
+      .from(programLinks)
+      .where(eq(programLinks.programId, id))
+      .orderBy(asc(programLinks.sortOrder), asc(programLinks.id)),
+    db
+      .select()
+      .from(programSections)
+      .where(eq(programSections.programId, id))
+      .orderBy(asc(programSections.sortOrder), asc(programSections.id)),
+  ]);
 
   return {
     ...row.program,
     status: row.status?.name ? row.status : null,
     links,
+    sections,
   };
 }
 
 export type ProgramInput = Omit<
   typeof programs.$inferInsert,
   "id" | "createdAt" | "updatedAt"
-> & { links: { label: string; url: string }[] };
+> & {
+  links: { label: string; url: string }[];
+  sections: { heading: string; body: string }[];
+};
 
 export async function saveProgram(id: number | null, input: ProgramInput) {
   const db = getDb();
-  const { links, ...values } = input;
+  const { links, sections, ...values } = input;
 
   let programId = id;
   if (programId == null) {
@@ -81,13 +93,13 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
       .where(eq(programs.id, programId));
   }
 
-  // Replace the link rows with what the form submitted.
-  const deleteLinks = db
-    .delete(programLinks)
-    .where(eq(programLinks.programId, programId));
+  // Replace the link and extra rows with what the form submitted.
+  const writes: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
+    db.delete(programLinks).where(eq(programLinks.programId, programId)),
+    db.delete(programSections).where(eq(programSections.programId, programId)),
+  ];
   if (links.length) {
-    await db.batch([
-      deleteLinks,
+    writes.push(
       db.insert(programLinks).values(
         links.map((link, i) => ({
           programId: programId!,
@@ -96,10 +108,21 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
           sortOrder: i + 1,
         })),
       ),
-    ]);
-  } else {
-    await deleteLinks;
+    );
   }
+  if (sections.length) {
+    writes.push(
+      db.insert(programSections).values(
+        sections.map((section, i) => ({
+          programId: programId!,
+          heading: section.heading,
+          body: section.body,
+          sortOrder: i + 1,
+        })),
+      ),
+    );
+  }
+  await db.batch(writes);
   return programId;
 }
 

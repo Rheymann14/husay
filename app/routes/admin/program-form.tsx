@@ -1,8 +1,16 @@
-import { ArrowLeft, GripVertical, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  GripVertical,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
 import { z } from "zod";
 
+import { RichTextEditor } from "~/components/rich-text-editor";
 import { SITE } from "~/lib/branding";
 import { centavosToInput, parsePesoToCentavos } from "~/lib/format";
 import {
@@ -11,6 +19,7 @@ import {
   nextProgramSortOrder,
   saveProgram,
 } from "~/lib/programs.server";
+import { sanitizeHtml } from "~/lib/sanitize-html.server";
 import type { Route } from "./+types/program-form";
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -42,16 +51,19 @@ const optionalDate = z
   .transform((v) => v || null)
   .refine((v) => v == null || /^\d{4}-\d{2}-\d{2}$/.test(v), "Invalid date");
 
+// Sanitized HTML from the rich text editor.
+const richText = z.string().max(50_000, "This text is too long");
+
 const programSchema = z
   .object({
     shortName: z.string().trim().min(1, "Enter the program short name").max(80),
     title: z.string().trim().min(1, "Enter the program title").max(300),
     provider: z.string().trim().max(300),
-    description: z.string().trim().max(10_000),
+    description: richText,
     startDate: optionalDate,
     endDate: optionalDate,
-    durationDetails: z.string().trim().max(10_000),
-    targetParticipants: z.string().trim().max(20_000),
+    durationDetails: richText,
+    targetParticipants: richText,
     funding: z
       .string()
       .transform((v) => parsePesoToCentavos(v))
@@ -72,6 +84,12 @@ const programSchema = z
           .refine((v) => /^https?:\/\//i.test(v), "Link must start with http:// or https://"),
       }),
     ),
+    sections: z.array(
+      z.object({
+        heading: z.string().trim().min(1, "Enter a row label").max(120),
+        body: richText,
+      }),
+    ),
   })
   .refine((v) => !v.startDate || !v.endDate || v.startDate <= v.endDate, {
     message: "End date must be on or after the start date",
@@ -89,20 +107,29 @@ export async function action({ request, params }: Route.ActionArgs) {
     .map((label, i) => ({ label, url: urls[i] ?? "" }))
     .filter((l) => l.label.trim() || l.url.trim());
 
+  const headings = form.getAll("sectionHeading").map(String);
+  const bodies = await Promise.all(
+    form.getAll("sectionBody").map((b) => sanitizeHtml(String(b))),
+  );
+  const sections = headings
+    .map((heading, i) => ({ heading, body: bodies[i] ?? "" }))
+    .filter((s) => s.heading.trim() || s.body);
+
   const values = {
     shortName: text("shortName"),
     title: text("title"),
     provider: text("provider"),
-    description: text("description"),
+    description: await sanitizeHtml(text("description")),
     startDate: text("startDate"),
     endDate: text("endDate"),
-    durationDetails: text("durationDetails"),
-    targetParticipants: text("targetParticipants"),
+    durationDetails: await sanitizeHtml(text("durationDetails")),
+    targetParticipants: await sanitizeHtml(text("targetParticipants")),
     funding: text("funding"),
     statusId: text("statusId"),
     sortOrder: text("sortOrder"),
     isPublished: form.get("isPublished") === "on",
     links,
+    sections,
   };
 
   const parsed = programSchema.safeParse(values);
@@ -124,9 +151,6 @@ function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="mt-1 text-xs text-red-700">{message}</p>;
 }
-
-const FORMAT_HINT =
-  "Start a line with “- ” for a bullet. Indent with two spaces (“  - ”) for a sub-bullet. Leave a blank line between paragraphs.";
 
 export default function ProgramForm({
   loaderData,
@@ -160,6 +184,34 @@ export default function ProgramForm({
     );
   const removeLink = (key: number) =>
     setLinks((rows) => rows.filter((r) => r.key !== key));
+
+  // Extra briefer rows. Bodies live in each editor; only order and
+  // headings are tracked here, keyed so editors survive reordering.
+  const [sections, setSections] = useState(() =>
+    (v?.sections ?? program?.sections ?? []).map((s, i) => ({
+      key: i,
+      heading: s.heading,
+      body: s.body,
+    })),
+  );
+  const [nextSectionKey, setNextSectionKey] = useState(sections.length);
+
+  const addSection = () => {
+    setSections((rows) => [...rows, { key: nextSectionKey, heading: "", body: "" }]);
+    setNextSectionKey((k) => k + 1);
+  };
+  const updateSectionHeading = (key: number, heading: string) =>
+    setSections((rows) => rows.map((r) => (r.key === key ? { ...r, heading } : r)));
+  const removeSection = (key: number) =>
+    setSections((rows) => rows.filter((r) => r.key !== key));
+  const moveSection = (index: number, by: -1 | 1) =>
+    setSections((rows) => {
+      const target = index + by;
+      if (target < 0 || target >= rows.length) return rows;
+      const next = [...rows];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
 
   const defaultStatus =
     v?.statusId ??
@@ -212,15 +264,15 @@ export default function ProgramForm({
               className="input mt-1"
             />
           </label>
-          <label className="block">
+          <div>
             <span className="label">Brief Description</span>
-            <textarea
+            <RichTextEditor
               name="description"
-              rows={5}
+              label="Brief Description"
               defaultValue={v?.description ?? program?.description}
-              className="input mt-1"
             />
-          </label>
+            <FieldError message={errors.description} />
+          </div>
         </section>
 
         <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
@@ -250,33 +302,110 @@ export default function ProgramForm({
           <p className="hint -mt-2">
             The list shows month and year, e.g. “Oct 2026 – Mar 2027”.
           </p>
-          <label className="block">
+          <div>
             <span className="label">Duration details</span>
-            <textarea
+            <RichTextEditor
               name="durationDetails"
-              rows={5}
+              label="Duration details"
               defaultValue={v?.durationDetails ?? program?.durationDetails}
-              placeholder={"- Online: Seven sessions of 2-hour virtual masterclasses\n  - Additional 20 hours of offline coursework\n- Onsite:\n  - 5-day immersive classes"}
-              className="input mt-1 font-mono text-[13px]"
+              placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
             />
-            <p className="hint">{FORMAT_HINT}</p>
-          </label>
+            <FieldError message={errors.durationDetails} />
+            <p className="hint">
+              Use the list buttons for bullets. Press Tab inside a bullet for a
+              sub-bullet.
+            </p>
+          </div>
         </section>
 
         <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="font-semibold text-slate-900">
             Description / Profile of Target Participants
           </h2>
-          <label className="block">
-            <span className="sr-only">Target participants</span>
-            <textarea
-              name="targetParticipants"
-              rows={10}
-              defaultValue={v?.targetParticipants ?? program?.targetParticipants}
-              className="input font-mono text-[13px]"
-            />
-            <p className="hint">{FORMAT_HINT}</p>
-          </label>
+          <RichTextEditor
+            name="targetParticipants"
+            label="Description / Profile of Target Participants"
+            defaultValue={v?.targetParticipants ?? program?.targetParticipants}
+          />
+          <FieldError message={errors.targetParticipants} />
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-slate-900">Additional rows</h2>
+              <p className="text-xs text-slate-500">
+                Extra rows shown in the briefer after Target Participants, e.g.
+                “Benefits”, “Requirements” or “Contact Person”.
+              </p>
+            </div>
+            <button type="button" onClick={addSection} className="btn-secondary shrink-0">
+              <Plus className="size-4" aria-hidden />
+              Add row
+            </button>
+          </div>
+          {sections.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
+              No additional rows yet.
+            </p>
+          ) : (
+            <ol className="space-y-3">
+              {sections.map((section, i) => (
+                <li
+                  key={section.key}
+                  className="space-y-2 rounded-md border border-slate-200 bg-slate-50/60 p-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <input
+                        name="sectionHeading"
+                        value={section.heading}
+                        onChange={(e) => updateSectionHeading(section.key, e.target.value)}
+                        placeholder="Row label, e.g. Benefits"
+                        aria-label={`Row ${i + 1} label`}
+                        className="input font-medium"
+                      />
+                      <FieldError message={errors[`sections.${i}.heading`]} />
+                    </div>
+                    <div className="flex shrink-0 items-center">
+                      <button
+                        type="button"
+                        onClick={() => moveSection(i, -1)}
+                        disabled={i === 0}
+                        className="rounded-md p-2 text-slate-500 enabled:hover:bg-slate-200 enabled:hover:text-slate-900 disabled:opacity-35"
+                        aria-label={`Move row ${i + 1} up`}
+                      >
+                        <ArrowUp className="size-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveSection(i, 1)}
+                        disabled={i === sections.length - 1}
+                        className="rounded-md p-2 text-slate-500 enabled:hover:bg-slate-200 enabled:hover:text-slate-900 disabled:opacity-35"
+                        aria-label={`Move row ${i + 1} down`}
+                      >
+                        <ArrowDown className="size-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSection(section.key)}
+                        className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
+                        aria-label={`Remove row ${i + 1}`}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                  <RichTextEditor
+                    name="sectionBody"
+                    label={section.heading || `Row ${i + 1} content`}
+                    defaultValue={section.body}
+                  />
+                  <FieldError message={errors[`sections.${i}.body`]} />
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
 
         <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">

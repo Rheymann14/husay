@@ -7,6 +7,7 @@ import { StatusBadge } from "~/components/status-badge";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { getProgram } from "~/lib/programs.server";
+import { toPlainText } from "~/lib/rich-text";
 import type { Route } from "./+types/program-detail";
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -15,7 +16,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { title: `${title} | ${SITE.name}` },
     {
       name: "description",
-      content: loaderData?.program.description.slice(0, 160) ?? "",
+      content: toPlainText(loaderData?.program.description ?? "").slice(0, 160),
     },
   ];
 }
@@ -113,6 +114,11 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
         <Row label="Description / Profile of Target Participants">
           <RichText text={program.targetParticipants} />
         </Row>
+        {program.sections.map((section) => (
+          <Row key={section.id} label={section.heading}>
+            <RichText text={section.body} />
+          </Row>
+        ))}
       </dl>
 
       {program.links.length > 0 && (

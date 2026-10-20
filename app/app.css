@@ -47,3 +47,33 @@ body {
     @apply mt-1 text-xs text-slate-500;
   }
 }
+
+/* Briefer text from the rich text editor (public page and admin editor). */
+@layer components {
+  .rich-text > * + * {
+    @apply mt-3;
+  }
+  .rich-text ul {
+    @apply list-disc pl-5;
+  }
+  .rich-text ul ul {
+    list-style-type: circle;
+  }
+  .rich-text ol {
+    @apply list-decimal pl-5;
+  }
+  .rich-text li + li {
+    @apply mt-1.5;
+  }
+  .rich-text li > ul,
+  .rich-text li > ol {
+    @apply mt-1;
+  }
+  .rich-text a {
+    @apply font-medium text-navy-700 underline underline-offset-2 hover:text-navy-900;
+  }
+  .rich-text p.is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-slate-400;
+    content: attr(data-placeholder);
+  }
+}

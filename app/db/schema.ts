@@ -83,6 +83,22 @@ export const programLinks = sqliteTable(
   (t) => [index("program_links_program_id_idx").on(t.programId)],
 );
 
+// Extra briefer rows an admin adds on top of the standard ones.
+export const programSections = sqliteTable(
+  "program_sections",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    programId: integer("program_id")
+      .notNull()
+      .references(() => programs.id, { onDelete: "cascade" }),
+    heading: text("heading").notNull(),
+    // Sanitized HTML from the rich text editor.
+    body: text("body").notNull().default(""),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("program_sections_program_id_idx").on(t.programId)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Status = typeof statuses.$inferSelect;
 export type Program = typeof programs.$inferSelect;
