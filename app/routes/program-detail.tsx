@@ -7,7 +7,11 @@ import { RichText } from "~/components/rich-text";
 import { StatusBadge } from "~/components/status-badge";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
-import { getProgram, getProgramBySlug } from "~/lib/programs.server";
+import {
+  getProgram,
+  getProgramBySlug,
+  getRenamedSlug,
+} from "~/lib/programs.server";
 import { toPlainText } from "~/lib/rich-text";
 import type { Route } from "./+types/program-detail";
 
@@ -33,7 +37,13 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw redirect(`/programs/${old.slug}${new URL(request.url).search}`, 301);
   }
   const program = await getProgramBySlug(params.slug);
-  if (!program) throw data("Program not found", { status: 404 });
+  if (!program) {
+    // A link from before the title changed. Not 301: the title could change
+    // back, and a cached permanent redirect would then loop.
+    const slug = await getRenamedSlug(params.slug);
+    if (slug) throw redirect(`/programs/${slug}${new URL(request.url).search}`);
+    throw data("Program not found", { status: 404 });
+  }
   return { program };
 }
 

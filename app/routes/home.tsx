@@ -182,7 +182,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                           >
                             Status
                           </SortHeader>
-                          <th className="w-11 px-2 py-2 text-center">
+                          <th className="w-11 px-2 py-1.5 text-center">
                             <span className="sr-only">View</span>
                           </th>
                         </tr>
@@ -202,10 +202,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                                   : "hover:bg-slate-50"
                               }`}
                             >
-                              <td className="px-2 py-1.5 text-slate-500">
+                              <td className="px-2 py-1 text-slate-500">
                                 {p.no}
                               </td>
-                              <td className="px-2 py-1.5 font-semibold text-navy-900">
+                              <td className="px-2 py-1 font-semibold text-navy-900">
                                 <span
                                   className="line-clamp-3"
                                   data-tooltip={p.shortName}
@@ -213,7 +213,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                                   {p.shortName}
                                 </span>
                               </td>
-                              <td className="px-2 py-1.5">
+                              <td className="px-2 py-1">
                                 {/* The briefer shows it in full; hover shows it here. */}
                                 <span
                                   className="line-clamp-3"
@@ -222,13 +222,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                                   {p.title}
                                 </span>
                               </td>
-                              <td className="px-2 py-1.5 text-xs text-slate-600">
+                              <td className="px-2 py-1 text-xs text-slate-600">
                                 {formatDuration(p.startDate, p.endDate)}
                               </td>
-                              <td className="px-2 py-1.5">
+                              <td className="px-2 py-1">
                                 <StatusBadge status={p.status} size="xs" />
                               </td>
-                              <td className="px-2 py-1.5 text-center">
+                              <td className="px-2 py-1 text-center">
                                 <Link
                                   to={programUrl(p.slug)}
                                   preventScrollReset
@@ -345,7 +345,7 @@ function SortHeader({
       aria-sort={
         active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
       }
-      className={`px-2 py-2 ${className}`}
+      className={`px-2 py-1.5 ${className}`}
     >
       <Link
         to={qs ? `${pathname}?${qs}` : pathname}

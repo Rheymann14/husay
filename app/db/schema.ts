@@ -56,8 +56,9 @@ export const programs = sqliteTable(
   "programs",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    // The public link, /programs/<slug>. Set from the title when the program is
-    // created and kept after that, so shared links don't break.
+    // The public link, /programs/<slug>, made from the title. When the title
+    // changes so does the slug; the old one goes in program_old_slugs so shared
+    // links still work.
     slug: text("slug").notNull().default(""),
     shortName: text("short_name").notNull(),
     title: text("title").notNull(),
@@ -96,6 +97,15 @@ export const programLinks = sqliteTable(
   },
   (t) => [index("program_links_program_id_idx").on(t.programId)],
 );
+
+// Slugs a program had before its title changed. /programs/<old slug>
+// redirects to the program's current slug.
+export const programOldSlugs = sqliteTable("program_old_slugs", {
+  slug: text("slug").primaryKey(),
+  programId: integer("program_id")
+    .notNull()
+    .references(() => programs.id, { onDelete: "cascade" }),
+});
 
 // Briefer rows an admin adds, e.g. Program Provider or Brief Description.
 export const programSections = sqliteTable(

@@ -28,7 +28,13 @@ import {
   type StatusSetting,
 } from "~/lib/status";
 
-const { programs, programLinks, programSections, programStatuses } = schema;
+const {
+  programs,
+  programLinks,
+  programOldSlugs,
+  programSections,
+  programStatuses,
+} = schema;
 
 // By date: earliest start first, then earliest end; programs without dates last.
 const byDate = [
@@ -185,6 +191,17 @@ export function getProgramBySlug(slug: string) {
   return loadProgram(eq(programs.slug, slug), false);
 }
 
+/** The current slug of the program that used to be at `oldSlug`, or null. */
+export async function getRenamedSlug(oldSlug: string) {
+  const [row] = await getDb()
+    .select({ slug: programs.slug })
+    .from(programOldSlugs)
+    .innerJoin(programs, eq(programs.id, programOldSlugs.programId))
+    .where(eq(programOldSlugs.slug, oldSlug))
+    .limit(1);
+  return row?.slug ?? null;
+}
+
 async function loadProgram(where: SQL, includeDrafts: boolean) {
   const db = getDb();
   const [program] = await db.select().from(programs).where(where).limit(1);
@@ -235,6 +252,8 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
   const { links, sections, ...values } = input;
 
   let programId = id;
+  // Set when a new title moves the program to a new slug.
+  let renamed: { from: string; to: string } | null = null;
   if (programId == null) {
     const [created] = await db
       .insert(programs)
@@ -242,9 +261,20 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
       .returning({ id: programs.id });
     programId = created.id;
   } else {
+    const [current] = await db
+      .select({ slug: programs.slug })
+      .from(programs)
+      .where(eq(programs.id, programId));
+    if (current && !slugMatches(current.slug, values.title)) {
+      renamed = { from: current.slug, to: await freeSlug(values.title) };
+    }
     await db
       .update(programs)
-      .set({ ...values, updatedAt: sql`CURRENT_TIMESTAMP` })
+      .set({
+        ...values,
+        ...(renamed && { slug: renamed.to }),
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
       .where(eq(programs.id, programId));
   }
 
@@ -253,6 +283,20 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
     db.delete(programLinks).where(eq(programLinks.programId, programId)),
     db.delete(programSections).where(eq(programSections.programId, programId)),
   ];
+  if (renamed) {
+    // The old link now redirects here. The new slug is live, so it is no
+    // longer anyone's old link.
+    writes.push(
+      db
+        .insert(programOldSlugs)
+        .values({ slug: renamed.from, programId })
+        .onConflictDoUpdate({
+          target: programOldSlugs.slug,
+          set: { programId },
+        }),
+      db.delete(programOldSlugs).where(eq(programOldSlugs.slug, renamed.to)),
+    );
+  }
   if (links.length) {
     writes.push(
       db.insert(programLinks).values(
@@ -280,6 +324,12 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
   }
   await db.batch(writes);
   return programId;
+}
+
+/** Whether `slug` is what freeSlug() could give for this title. */
+function slugMatches(slug: string, title: string) {
+  const base = slugify(title) || "program";
+  return slug === base || new RegExp(`^${base}-\\d+$`).test(slug);
 }
 
 /** The title's slug, or with "-2", "-3"… added when another program has it. */
