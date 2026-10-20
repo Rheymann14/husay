@@ -42,8 +42,8 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  // A short page, so the list fits beside the briefer without scrolling.
-  const params = getListParams(request, 5);
+  // Rows are compact, so a page of 10 fits beside the briefer without scrolling.
+  const params = getListParams(request, 10);
   const sort = getProgramSort(request);
   const [{ programs, total, page, pageCount, pageSize }, user] =
     await Promise.all([
@@ -113,13 +113,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <div className="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)]">
           <section
             aria-label="Programs"
-            className={`overflow-hidden rounded-lg border border-slate-200 bg-white xl:flex xl:max-h-full xl:flex-col ${
+            className={`overflow-hidden rounded-lg border border-slate-200 bg-white xl:flex xl:h-full xl:flex-col ${
               nothingPosted ? "xl:col-span-2" : ""
             }`}
           >
-            {/* Pages are short enough to fit; scrolling is only a fallback for
-                very short windows, and the pager below always stays in view. */}
-            <div className="xl:min-h-0 xl:overflow-y-auto">
+            {/* The list is as tall as the briefer beside it, with the pager at
+                the bottom. Pages are short enough to fit; scrolling is only a
+                fallback for very short windows. */}
+            <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
               {nothingPosted ? (
                 <EmptyState
                   size="lg"
@@ -136,35 +137,42 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 />
               ) : (
                 <>
-                  {/* Table for tablets and up */}
-                  <div className="hidden overflow-x-auto md:block">
-                    <table className="w-full text-left text-sm">
-                      <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+                  {/* Table for tablets and up. Fixed column widths keep it
+                      inside its panel; long text is clamped instead. */}
+                  <div className="hidden md:block">
+                    <table className="w-full table-fixed text-left text-[13px] leading-snug">
+                      <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
                         <tr>
-                          <SortHeader sortKey="no" sort={sort} className="w-10">
+                          <SortHeader sortKey="no" sort={sort} className="w-11">
                             No.
                           </SortHeader>
                           <SortHeader
                             sortKey="provider"
                             sort={sort}
-                            className="w-32"
+                            className="w-[24%]"
                           >
                             Provider
                           </SortHeader>
-                          <SortHeader
-                            sortKey="title"
-                            sort={sort}
-                            className="min-w-[12rem]"
-                          >
+                          <SortHeader sortKey="title" sort={sort}>
                             Program Title
                           </SortHeader>
-                          <SortHeader sortKey="duration" sort={sort}>
+                          <SortHeader
+                            sortKey="duration"
+                            sort={sort}
+                            className="w-28"
+                          >
                             Duration of Program
                           </SortHeader>
-                          <SortHeader sortKey="status" sort={sort}>
+                          <SortHeader
+                            sortKey="status"
+                            sort={sort}
+                            className="w-28"
+                          >
                             Status
                           </SortHeader>
-                          <th className="w-16 px-3 py-2 text-center">View</th>
+                          <th className="w-11 px-2 py-2 text-center">
+                            <span className="sr-only">View</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -182,38 +190,43 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                                   : "hover:bg-slate-50"
                               }`}
                             >
-                              <td className="px-3 py-2 text-slate-500">
+                              <td className="px-2 py-1.5 text-slate-500">
                                 {p.no}
                               </td>
-                              <td className="px-3 py-2 font-semibold text-navy-900">
-                                {p.shortName}
+                              <td className="px-2 py-1.5 font-semibold text-navy-900">
+                                <span
+                                  className="line-clamp-2"
+                                  data-tooltip={p.shortName}
+                                >
+                                  {p.shortName}
+                                </span>
                               </td>
-                              <td className="px-3 py-2">
+                              <td className="px-2 py-1.5">
                                 {/* The briefer shows it in full; hover shows it here. */}
                                 <span
-                                  className="line-clamp-3"
+                                  className="line-clamp-2"
                                   data-tooltip={p.title}
                                 >
                                   {p.title}
                                 </span>
                               </td>
-                              <td className="min-w-[7rem] px-3 py-2 text-slate-600">
+                              <td className="px-2 py-1.5 text-xs text-slate-600">
                                 {formatDuration(p.startDate, p.endDate)}
                               </td>
-                              <td className="px-3 py-2">
-                                <StatusBadge status={p.status} />
+                              <td className="px-2 py-1.5">
+                                <StatusBadge status={p.status} size="xs" />
                               </td>
-                              <td className="px-3 py-2 text-center">
+                              <td className="px-2 py-1.5 text-center">
                                 <Link
                                   to={programUrl(p.slug)}
                                   preventScrollReset
                                   prefetch="intent"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-navy-700 hover:bg-navy-50"
+                                  className="inline-flex rounded p-1 text-navy-700 hover:bg-navy-50"
                                   aria-label={`View ${p.title}`}
+                                  data-tooltip="View briefer"
                                 >
-                                  <Eye className="size-3.5" aria-hidden />
-                                  View
+                                  <Eye className="size-4" aria-hidden />
                                 </Link>
                               </td>
                             </tr>
@@ -320,7 +333,7 @@ function SortHeader({
       aria-sort={
         active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
       }
-      className={`px-3 py-2 ${className}`}
+      className={`px-2 py-2 ${className}`}
     >
       <Link
         to={qs ? `${pathname}?${qs}` : pathname}

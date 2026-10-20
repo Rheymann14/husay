@@ -112,19 +112,26 @@ export function statusOptions(
 
 type Props = {
   status: Pick<StatusDef, "name" | "color" | "icon"> | null;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
+};
+
+const SIZES = {
+  xs: { badge: "gap-1 px-2 py-px text-[11px]", icon: "size-3" },
+  sm: { badge: "gap-1.5 px-2.5 py-0.5 text-xs", icon: "size-3.5" },
+  md: { badge: "gap-1.5 px-3 py-1 text-sm", icon: "size-4" },
 };
 
 export function StatusBadge({ status, size = "sm" }: Props) {
   const { Icon, badge } = styleOf(status);
+  const name = status?.name || "No status";
   return (
+    // A long custom name is cut short rather than widening its column.
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border font-medium whitespace-nowrap ${badge} ${
-        size === "sm" ? "px-2.5 py-0.5 text-xs" : "px-3 py-1 text-sm"
-      }`}
+      className={`inline-flex max-w-full items-center rounded-full border font-medium whitespace-nowrap ${badge} ${SIZES[size].badge}`}
+      title={name}
     >
-      <Icon className={size === "sm" ? "size-3.5" : "size-4"} aria-hidden />
-      {status?.name || "No status"}
+      <Icon className={`shrink-0 ${SIZES[size].icon}`} aria-hidden />
+      <span className="truncate">{name}</span>
     </span>
   );
 }

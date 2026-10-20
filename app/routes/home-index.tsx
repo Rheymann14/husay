@@ -4,7 +4,8 @@ import { EmptyState } from "~/components/empty-state";
 
 export default function HomeIndex() {
   return (
-    <aside className="hidden rounded-lg border border-dashed border-slate-300 bg-white/60 xl:block">
+    // As tall as the list beside it, like the briefer that replaces it.
+    <aside className="hidden rounded-lg border border-dashed border-slate-300 bg-white/60 xl:flex xl:h-full xl:items-center xl:justify-center">
       <EmptyState
         icon={MousePointerClick}
         title="No program selected"
