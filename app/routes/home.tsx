@@ -195,7 +195,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                               </td>
                               <td className="px-2 py-1.5 font-semibold text-navy-900">
                                 <span
-                                  className="line-clamp-2"
+                                  className="line-clamp-3"
                                   data-tooltip={p.shortName}
                                 >
                                   {p.shortName}
@@ -204,7 +204,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                               <td className="px-2 py-1.5">
                                 {/* The briefer shows it in full; hover shows it here. */}
                                 <span
-                                  className="line-clamp-2"
+                                  className="line-clamp-3"
                                   data-tooltip={p.title}
                                 >
                                   {p.title}
