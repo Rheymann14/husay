@@ -12,7 +12,7 @@ export function getListParams(request: Request, pageSize = 10): ListParams {
 }
 
 /** Case-insensitive "contains" match, with LIKE wildcards in the query escaped. */
-export function contains(column: SQLiteColumn, query: string): SQL {
+export function contains(column: SQLiteColumn | SQL, query: string): SQL {
   const escaped = query.replace(/[\\%_]/g, (c) => `\\${c}`);
   return sql`${column} like ${`%${escaped}%`} escape '\\'`;
 }

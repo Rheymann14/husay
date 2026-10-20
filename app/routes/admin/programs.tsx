@@ -158,7 +158,7 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <SearchBox placeholder="Search programs…" />
+          <SearchBox placeholder="Search title or tracking no.…" />
           <Link to="/admin/programs/new" className="btn-primary">
             <Plus className="size-4" aria-hidden />
             Add program

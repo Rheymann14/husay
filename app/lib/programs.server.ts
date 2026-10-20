@@ -46,6 +46,9 @@ const byDate = [
   asc(programs.id),
 ];
 
+// trackingNumber() in SQL, so a search can match "HUSAY-2026-0007" or part of it.
+const trackingNoSql = sql`'HUSAY-' || substr(${programs.createdAt}, 1, 4) || '-' || printf('%04d', ${programs.id})`;
+
 const listColumns = {
   id: programs.id,
   createdAt: programs.createdAt,
@@ -120,7 +123,11 @@ export async function searchPrograms(
   const where = and(
     publishedOnly ? eq(programs.isPublished, true) : undefined,
     query
-      ? or(contains(programs.shortName, query), contains(programs.title, query))
+      ? or(
+          contains(programs.shortName, query),
+          contains(programs.title, query),
+          contains(trackingNoSql, query),
+        )
       : undefined,
   );
   const [{ total }] = await db
