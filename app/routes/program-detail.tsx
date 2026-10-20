@@ -1,7 +1,8 @@
-import { ExternalLink, Lock, X } from "lucide-react";
-import { useEffect } from "react";
+import { ExternalLink, Lock, Printer, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { data, Link, useLocation, useNavigate } from "react-router";
 
+import { BrieferPrintDialog } from "~/components/briefer-print-dialog";
 import { RichText } from "~/components/rich-text";
 import { StatusBadge } from "~/components/status-badge";
 import { SITE } from "~/lib/branding";
@@ -52,14 +53,17 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
   const closeTo = `/${useLocation().search}`;
   const sectionsBefore = program.sections.slice(0, program.durationPosition);
   const sectionsAfter = program.sections.slice(program.durationPosition);
+  const [printOpen, setPrintOpen] = useState(false);
 
   useEffect(() => {
+    // While the print dialog is open, Escape closes only the dialog.
+    if (printOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") navigate(closeTo, { preventScrollReset: true });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate, closeTo]);
+  }, [navigate, closeTo, printOpen]);
 
   return (
     <>
@@ -89,15 +93,26 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
             <StatusBadge status={program.status} />
           </div>
         </div>
-        <Link
-          to={closeTo}
-          preventScrollReset
-          className="-mr-1.5 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
-          aria-label="Close program details"
-          data-tooltip="Close"
-        >
-          <X className="size-5" aria-hidden />
-        </Link>
+        <div className="-mr-1.5 flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => setPrintOpen(true)}
+            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Print or download briefer"
+            data-tooltip="Print / PDF"
+          >
+            <Printer className="size-5" aria-hidden />
+          </button>
+          <Link
+            to={closeTo}
+            preventScrollReset
+            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Close program details"
+            data-tooltip="Close"
+          >
+            <X className="size-5" aria-hidden />
+          </Link>
+        </div>
       </div>
 
       <div className="p-4">
@@ -163,6 +178,11 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
         </div>
       )}
     </aside>
+    <BrieferPrintDialog
+      program={program}
+      open={printOpen}
+      onClose={() => setPrintOpen(false)}
+    />
     </>
   );
 }

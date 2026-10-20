@@ -10,6 +10,7 @@ Built with React Router (full-stack React + TypeScript) on Cloudflare Workers, w
 - Table of programs: No., Program, Title Program, Duration of Program, Status, View, listed by date (earliest start first)
 - Click a row to open the program briefer in a panel on the right (full screen on phones)
 - Application links (for example “Apply Here”) at the bottom of the briefer
+- Print the briefer or download it as a PDF from a preview dialog (no new tab)
 - CHED and Bagong Pilipinas logos in the header
 
 **Admin area (`/admin`, sign-in required)**

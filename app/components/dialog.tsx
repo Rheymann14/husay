@@ -11,12 +11,15 @@ export function Dialog({
   onClose,
   title,
   description,
+  size = "md",
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   description?: string;
+  /** "xl" for wide content such as a document preview. */
+  size?: "md" | "xl";
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -38,7 +41,7 @@ export function Dialog({
       // Clicking the backdrop does nothing, so a stray click can't throw away
       // what was typed. Close with ×, Cancel or Escape.
       onClose={onClose}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40"
+      className={`m-auto w-[calc(100%-2rem)] ${size === "xl" ? "max-w-4xl" : "max-w-lg"} rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40`}
     >
       <div className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
