@@ -94,6 +94,7 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
           preventScrollReset
           className="-mr-1.5 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
           aria-label="Close program details"
+          data-tooltip="Close"
         >
           <X className="size-5" aria-hidden />
         </Link>

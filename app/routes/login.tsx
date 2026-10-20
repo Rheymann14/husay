@@ -131,6 +131,7 @@ export default function Login({
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-navy-100 focus-visible:outline-none"
                     aria-label={showPassword ? "Hide password" : "Show password"}
+                    data-tooltip={showPassword ? "Hide password" : "Show password"}
                     aria-pressed={showPassword}
                   >
                     {showPassword ? (

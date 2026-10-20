@@ -289,7 +289,7 @@ function ResetPasswordDialog({ user }: { user: UserRow }) {
       <button
         type="button"
         className="rounded-md p-1.5 text-slate-500 hover:bg-navy-50 hover:text-navy-800"
-        title="Reset password"
+        data-tooltip="Reset password"
         aria-label={`Reset password for ${user.name}`}
         onClick={() => {
           setAttempt((n) => n + 1);
@@ -396,7 +396,7 @@ function UserRowView({ user, isMe }: { user: UserRow; isMe: boolean }) {
                 onClick={() => setConfirmingDelete(true)}
                 disabled={deleteFetcher.state !== "idle"}
                 className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-700"
-                title="Remove user"
+                data-tooltip="Remove user"
                 aria-label={`Remove ${user.name}`}
               >
                 <Trash2 className="size-4" aria-hidden />

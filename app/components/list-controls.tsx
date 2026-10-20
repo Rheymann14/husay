@@ -78,6 +78,7 @@ export function SearchBox({
           }}
           className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           aria-label="Clear search"
+          data-tooltip="Clear search"
         >
           <X className="size-3.5" aria-hidden />
         </button>
@@ -146,6 +147,7 @@ export function Pagination({
               to={to(page - 1)}
               className={`${pageLink} text-slate-600 hover:bg-slate-100`}
               aria-label="Previous page"
+              data-tooltip="Previous page"
             >
               <ChevronLeft className="size-4" aria-hidden />
             </Link>
@@ -179,6 +181,7 @@ export function Pagination({
               to={to(page + 1)}
               className={`${pageLink} text-slate-600 hover:bg-slate-100`}
               aria-label="Next page"
+              data-tooltip="Next page"
             >
               <ChevronRight className="size-4" aria-hidden />
             </Link>

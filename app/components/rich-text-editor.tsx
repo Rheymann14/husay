@@ -130,6 +130,7 @@ export function RichTextEditor({ name, defaultValue = "", label, placeholder }: 
               onClick={() => setExpanded(false)}
               className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
               aria-label="Exit full screen"
+              data-tooltip="Exit full screen"
             >
               <X className="size-4" aria-hidden />
             </button>
@@ -298,7 +299,7 @@ function ToolButton({
   return (
     <button
       type="button"
-      title={label}
+      data-tooltip={label}
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}

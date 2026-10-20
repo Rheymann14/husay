@@ -13,6 +13,7 @@ import {
 
 import { EmptyState } from "~/components/empty-state";
 import { showToast, Toaster } from "~/components/toaster";
+import { TooltipLayer } from "~/components/tooltip";
 import { getToast } from "~/lib/toast.server";
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -50,6 +51,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Toaster />
+        <TooltipLayer />
         <ScrollRestoration />
         <Scripts />
       </body>

@@ -92,7 +92,7 @@ export function SortableItem({
       {...attributes}
       {...listeners}
       aria-label={handleLabel}
-      title="Drag to reorder"
+      data-tooltip="Drag to reorder"
       className="shrink-0 cursor-grab touch-none rounded-md p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-navy-600 active:cursor-grabbing"
     >
       <GripVertical className="size-4" aria-hidden />

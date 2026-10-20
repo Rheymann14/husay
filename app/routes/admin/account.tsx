@@ -278,6 +278,7 @@ function PasswordField({
           onClick={() => setVisible((v) => !v)}
           className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2.5 text-slate-400 hover:text-slate-700 focus-visible:text-navy-700 focus-visible:outline-none"
           aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          data-tooltip={visible ? "Hide password" : "Show password"}
           aria-pressed={visible}
         >
           {visible ? (

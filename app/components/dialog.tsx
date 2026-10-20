@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useRef } from "react";
 
 /**
  * Modal dialog built on <dialog>, so focus, Escape and the backdrop come from
- * the browser. Content outside it (such as the Combobox menu) can't be used
+ * the browser. Clicking outside it does not close it. Content outside it (such as the Combobox menu) can't be used
  * while it is open. Mark the field to focus first with data-autofocus.
  */
 export function Dialog({
@@ -35,11 +35,9 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
+      // Clicking the backdrop does nothing, so a stray click can't throw away
+      // what was typed. Close with ×, Cancel or Escape.
       onClose={onClose}
-      // A click on the dialog element itself is a click on the backdrop.
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40"
     >
       <div className="space-y-4 p-5">
@@ -55,6 +53,7 @@ export function Dialog({
             onClick={onClose}
             className="-m-1 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             aria-label="Close"
+            data-tooltip="Close"
           >
             <X className="size-4" aria-hidden />
           </button>

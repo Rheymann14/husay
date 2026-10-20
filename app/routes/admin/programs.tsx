@@ -97,7 +97,7 @@ function DeleteButton({ program }: { program: ProgramListItem }) {
         disabled={fetcher.state !== "idle"}
         className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-700"
         aria-label={`Delete ${program.shortName}`}
-        title="Delete"
+        data-tooltip="Delete"
       >
         <Trash2 className="size-4" aria-hidden />
       </button>
@@ -214,7 +214,7 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
                           to={`/admin/programs/${p.id}/edit`}
                           className="rounded-md p-1.5 text-slate-500 hover:bg-navy-50 hover:text-navy-800"
                           aria-label={`Edit ${p.shortName}`}
-                          title="Edit"
+                          data-tooltip="Edit"
                         >
                           <Pencil className="size-4" aria-hidden />
                         </Link>

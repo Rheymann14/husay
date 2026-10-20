@@ -459,6 +459,7 @@ export default function ProgramForm({
                               onClick={() => removeRow(row.key)}
                               className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
                               aria-label={`Remove row ${i + 1}`}
+                              data-tooltip="Remove row"
                             >
                               <Trash2 className="size-4" aria-hidden />
                             </button>
@@ -551,6 +552,7 @@ export default function ProgramForm({
                           onClick={() => removeLink(link.key)}
                           className="col-start-3 row-start-1 rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700 sm:col-start-4"
                           aria-label={`Remove link ${i + 1}`}
+                          data-tooltip="Remove link"
                         >
                           <Trash2 className="size-4" aria-hidden />
                         </button>

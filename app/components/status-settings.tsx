@@ -92,9 +92,11 @@ function StatusSettingsDialog({
                   <StatusBadge status={{ ...row, name: row.name || "Preview" }} />
                   {builtIn ? (
                     <span
-                      className="p-1.5 text-slate-400"
-                      title="Built-in: used by Automatic"
-                      aria-label="Built-in"
+                      className="rounded-md p-1.5 text-slate-400 focus-visible:outline-2 focus-visible:outline-navy-600"
+                      data-tooltip="Built-in: used by Automatic"
+                      tabIndex={0}
+                      role="img"
+                      aria-label="Built-in: used by Automatic"
                     >
                       <Lock className="size-4" aria-hidden />
                     </span>
@@ -104,7 +106,7 @@ function StatusSettingsDialog({
                       onClick={() => setRows((r) => r.filter((x) => x.id !== row.id))}
                       className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-700"
                       aria-label={`Remove ${row.name || "status"}`}
-                      title="Remove"
+                      data-tooltip="Remove"
                     >
                       <Trash2 className="size-4" aria-hidden />
                     </button>
@@ -119,7 +121,7 @@ function StatusSettingsDialog({
                         onClick={() => update(row.id, { color })}
                         aria-label={STATUS_COLOR_CLASSES[color].label}
                         aria-pressed={row.color === color}
-                        title={STATUS_COLOR_CLASSES[color].label}
+                        data-tooltip={STATUS_COLOR_CLASSES[color].label}
                         className={`size-5 rounded-full ring-offset-2 ${STATUS_COLOR_CLASSES[color].swatch} ${
                           row.color === color ? "ring-2 ring-slate-900" : ""
                         }`}
@@ -136,7 +138,7 @@ function StatusSettingsDialog({
                           onClick={() => update(row.id, { icon })}
                           aria-label={label}
                           aria-pressed={row.icon === icon}
-                          title={label}
+                          data-tooltip={label}
                           className={`rounded-md border p-1 ${
                             row.icon === icon
                               ? "border-navy-700 bg-navy-50 text-navy-800"
