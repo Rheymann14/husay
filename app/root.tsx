@@ -12,6 +12,7 @@ import {
 } from "react-router";
 
 import { EmptyState } from "~/components/empty-state";
+import { ProgressBar } from "~/components/progress-bar";
 import { showToast, Toaster } from "~/components/toaster";
 import { TooltipLayer } from "~/components/tooltip";
 import { getToast } from "~/lib/toast.server";
@@ -49,6 +50,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        <ProgressBar />
         {children}
         <Toaster />
         <TooltipLayer />

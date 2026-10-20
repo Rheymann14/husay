@@ -1,7 +1,9 @@
 import { CalendarClock, ChevronRight, Eye, SearchX } from "lucide-react";
+import { useState } from "react";
 import {
   Link,
   Outlet,
+  PrefetchPageLinks,
   useLocation,
   useNavigate,
   useParams,
@@ -57,6 +59,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const programUrl = (id: number) => `/programs/${id}${search}`;
   const open = (id: number) =>
     navigate(programUrl(id), { preventScrollReset: true });
+  // Rows aren't links, so hovering one fetches its briefer here instead.
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -131,6 +135,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                           <tr
                             key={p.id}
                             onClick={() => open(p.id)}
+                            onMouseEnter={() => setHoveredId(p.id)}
                             aria-selected={selected}
                             className={`cursor-pointer transition-colors ${
                               selected
@@ -155,6 +160,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                               <Link
                                 to={programUrl(p.id)}
                                 preventScrollReset
+                                prefetch="intent"
                                 onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-navy-700 hover:bg-navy-50"
                                 aria-label={`View ${p.title}`}
@@ -168,6 +174,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       })}
                     </tbody>
                   </table>
+                  {hoveredId != null && hoveredId !== selectedId && (
+                    <PrefetchPageLinks page={programUrl(hoveredId)} />
+                  )}
                 </div>
 
                 {/* Cards for phones */}
@@ -177,6 +186,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       <Link
                         to={programUrl(p.id)}
                         preventScrollReset
+                        prefetch="intent"
                         className="flex items-start gap-2.5 px-3 py-2.5 active:bg-slate-50"
                       >
                         <span className="mt-0.5 w-6 shrink-0 text-sm text-slate-400">

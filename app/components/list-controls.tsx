@@ -145,6 +145,7 @@ export function Pagination({
           {page > 1 ? (
             <Link
               to={to(page - 1)}
+              prefetch="intent"
               className={`${pageLink} text-slate-600 hover:bg-slate-100`}
               aria-label="Previous page"
               data-tooltip="Previous page"
@@ -165,6 +166,7 @@ export function Pagination({
               <Link
                 key={p}
                 to={to(p)}
+                prefetch="intent"
                 aria-current={p === page ? "page" : undefined}
                 className={`${pageLink} ${
                   p === page
@@ -179,6 +181,7 @@ export function Pagination({
           {page < pageCount ? (
             <Link
               to={to(page + 1)}
+              prefetch="intent"
               className={`${pageLink} text-slate-600 hover:bg-slate-100`}
               aria-label="Next page"
               data-tooltip="Next page"
