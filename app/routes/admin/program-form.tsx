@@ -1,18 +1,11 @@
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowUp,
-  GripVertical,
-  Lock,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Lock, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { data, Form, Link, useNavigation } from "react-router";
 import { z } from "zod";
 
 import { Combobox } from "~/components/combobox";
 import { RichTextEditor } from "~/components/rich-text-editor";
+import { SortableItem, SortableList } from "~/components/sortable-list";
 import { statusOptions } from "~/components/status-badge";
 import { useStatusSettings } from "~/components/status-settings";
 import { useResultToast, type ActionResult } from "~/components/toaster";
@@ -173,6 +166,10 @@ type BrieferRow =
 
 const newRowHighlight = "border-amber-300 bg-amber-50";
 
+// Drag-and-drop ids; prefixed because dnd-kit mishandles the id 0.
+const rowId = (row: BrieferRow) => (row.kind === "duration" ? "duration" : `row-${row.key}`);
+const linkId = (link: { key: number }) => `link-${link.key}`;
+
 function NewTag() {
   return (
     <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-300">
@@ -195,9 +192,6 @@ function initialRows(
   rows.splice(at, 0, { key: 0, kind: "duration" });
   return rows;
 }
-
-const iconButton =
-  "rounded-md p-2 text-slate-500 enabled:hover:bg-slate-200 enabled:hover:text-slate-900 disabled:opacity-35";
 
 export default function ProgramForm({
   loaderData,
@@ -272,14 +266,6 @@ export default function ProgramForm({
     );
   const removeRow = (key: number) =>
     setRows((r) => r.filter((row) => row.key !== key));
-  const moveRow = (index: number, by: -1 | 1) =>
-    setRows((r) => {
-      const target = index + by;
-      if (target < 0 || target >= r.length) return r;
-      const next = [...r];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
 
   const durationPosition = rows.findIndex((r) => r.kind === "duration");
 
@@ -396,108 +382,100 @@ export default function ProgramForm({
               Add row
             </button>
           </div>
-          <ol className="space-y-3">
-            {rows.map((row, i) => {
-              const moveButtons = (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => moveRow(i, -1)}
-                    disabled={i === 0}
-                    className={iconButton}
-                    aria-label={`Move row ${i + 1} up`}
-                  >
-                    <ArrowUp className="size-4" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveRow(i, 1)}
-                    disabled={i === rows.length - 1}
-                    className={iconButton}
-                    aria-label={`Move row ${i + 1} down`}
-                  >
-                    <ArrowDown className="size-4" aria-hidden />
-                  </button>
-                </>
-              );
+          <SortableList items={rows} getId={rowId} onReorder={setRows}>
+            <ol className="space-y-3">
+              {rows.map((row, i) => {
+                if (row.kind === "duration") {
+                  return (
+                    <SortableItem
+                      key="duration"
+                      id={rowId(row)}
+                      handleLabel="Drag to reorder Duration row"
+                      className="space-y-2 rounded-md border border-navy-100 bg-navy-50/50 p-3"
+                    >
+                      {(handle) => (
+                        <>
+                          <div className="flex items-center gap-1">
+                            {handle}
+                            <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-slate-900">
+                              Duration
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
+                                <Lock className="size-3" aria-hidden />
+                                Built-in
+                              </span>
+                            </p>
+                          </div>
+                          <p className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
+                            {formatDuration(startDate || null, endDate || null, { long: true })}
+                          </p>
+                          <p className="hint -mt-1">
+                            First line comes from Duration of Program. Add the
+                            schedule details below.
+                          </p>
+                          <RichTextEditor
+                            name="durationDetails"
+                            label="Duration details"
+                            defaultValue={v?.durationDetails ?? program?.durationDetails}
+                            placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
+                          />
+                          <FieldError message={errors.durationDetails} />
+                        </>
+                      )}
+                    </SortableItem>
+                  );
+                }
 
-              if (row.kind === "duration") {
+                rowIndex += 1;
+                const errorIndex = rowIndex;
                 return (
-                  <li
-                    key="duration"
-                    className="space-y-2 rounded-md border border-navy-100 bg-navy-50/50 p-3"
+                  <SortableItem
+                    key={row.key}
+                    id={rowId(row)}
+                    handleLabel={`Drag to reorder row ${i + 1}`}
+                    className={`space-y-2 rounded-md border p-3 ${
+                      row.isNew ? newRowHighlight : "border-slate-200 bg-slate-50/60"
+                    }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <p className="flex min-w-0 flex-1 items-center gap-2 px-1 text-sm font-medium text-slate-900">
-                        Duration
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
-                          <Lock className="size-3" aria-hidden />
-                          Built-in
-                        </span>
-                      </p>
-                      <div className="flex shrink-0 items-center">{moveButtons}</div>
-                    </div>
-                    <p className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
-                      {formatDuration(startDate || null, endDate || null, { long: true })}
-                    </p>
-                    <p className="hint -mt-1">
-                      First line comes from Duration of Program. Add the
-                      schedule details below.
-                    </p>
-                    <RichTextEditor
-                      name="durationDetails"
-                      label="Duration details"
-                      defaultValue={v?.durationDetails ?? program?.durationDetails}
-                      placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
-                    />
-                    <FieldError message={errors.durationDetails} />
-                  </li>
+                    {(handle) => (
+                      <>
+                        <div className="flex items-start gap-1">
+                          {handle}
+                          <div className="min-w-0 flex-1">
+                            <input
+                              name="sectionHeading"
+                              value={row.heading}
+                              onChange={(e) => updateHeading(row.key, e.target.value)}
+                              placeholder="Row label, e.g. Program Provider"
+                              aria-label={`Row ${i + 1} label`}
+                              className="input font-medium"
+                            />
+                            <FieldError message={errors[`sections.${errorIndex}.heading`]} />
+                          </div>
+                          <div className="flex shrink-0 items-center">
+                            {row.isNew && <NewTag />}
+                            <button
+                              type="button"
+                              onClick={() => removeRow(row.key)}
+                              className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
+                              aria-label={`Remove row ${i + 1}`}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                            </button>
+                          </div>
+                        </div>
+                        <RichTextEditor
+                          name="sectionBody"
+                          label={row.heading || `Row ${i + 1} content`}
+                          defaultValue={row.body}
+                        />
+                        <FieldError message={errors[`sections.${errorIndex}.body`]} />
+                      </>
+                    )}
+                  </SortableItem>
                 );
-              }
-
-              rowIndex += 1;
-              return (
-                <li
-                  key={row.key}
-                  className={`space-y-2 rounded-md border p-3 ${
-                    row.isNew ? newRowHighlight : "border-slate-200 bg-slate-50/60"
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <input
-                        name="sectionHeading"
-                        value={row.heading}
-                        onChange={(e) => updateHeading(row.key, e.target.value)}
-                        placeholder="Row label, e.g. Program Provider"
-                        aria-label={`Row ${i + 1} label`}
-                        className="input font-medium"
-                      />
-                      <FieldError message={errors[`sections.${rowIndex}.heading`]} />
-                    </div>
-                    <div className="flex shrink-0 items-center">
-                      {row.isNew && <NewTag />}
-                      {moveButtons}
-                      <button
-                        type="button"
-                        onClick={() => removeRow(row.key)}
-                        className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
-                        aria-label={`Remove row ${i + 1}`}
-                      >
-                        <Trash2 className="size-4" aria-hidden />
-                      </button>
-                    </div>
-                  </div>
-                  <RichTextEditor
-                    name="sectionBody"
-                    label={row.heading || `Row ${i + 1} content`}
-                    defaultValue={row.body}
-                  />
-                  <FieldError message={errors[`sections.${rowIndex}.body`]} />
-                </li>
-              );
-            })}
-          </ol>
+              })}
+            </ol>
+          </SortableList>
           <button
             type="button"
             onClick={addRow}
@@ -526,52 +504,57 @@ export default function ProgramForm({
               No application link yet.
             </p>
           ) : (
-            <ul className="space-y-2">
-              {links.map((link, i) => (
-                <li
-                  key={link.key}
-                  className={`grid grid-cols-[auto_1fr_auto] items-start gap-2 rounded-md border p-1.5 sm:grid-cols-[auto_12rem_1fr_auto] ${
-                    link.isNew ? newRowHighlight : "border-transparent"
-                  }`}
-                >
-                  <GripVertical
-                    className={`mt-2.5 size-4 ${link.isNew ? "text-amber-500" : "text-slate-300"}`}
-                    aria-hidden
-                  />
-                  <div>
-                    <input
-                      name="linkLabel"
-                      value={link.label}
-                      onChange={(e) => updateLink(link.key, "label", e.target.value)}
-                      placeholder="Apply Here"
-                      aria-label={`Link ${i + 1} label`}
-                      className="input"
-                    />
-                    <FieldError message={errors[`links.${i}.label`]} />
-                  </div>
-                  <div className="col-start-2 sm:col-start-auto">
-                    <input
-                      name="linkUrl"
-                      type="url"
-                      value={link.url}
-                      onChange={(e) => updateLink(link.key, "url", e.target.value)}
-                      placeholder="https://forms.gle/…"
-                      aria-label={`Link ${i + 1} URL`}
-                      className="input"
-                    />
-                    <FieldError message={errors[`links.${i}.url`]} />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeLink(link.key)}
-                    className="col-start-3 row-start-1 rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700 sm:col-start-4"
-                    aria-label={`Remove link ${i + 1}`}
+            <SortableList items={links} getId={linkId} onReorder={setLinks}>
+              <ul className="space-y-2">
+                {links.map((link, i) => (
+                  <SortableItem
+                    key={link.key}
+                    id={linkId(link)}
+                    handleLabel={`Drag to reorder link ${i + 1}`}
+                    className={`grid grid-cols-[auto_1fr_auto] items-start gap-2 rounded-md border p-1.5 sm:grid-cols-[auto_12rem_1fr_auto] ${
+                      link.isNew ? newRowHighlight : "border-transparent bg-white"
+                    }`}
                   >
-                    <Trash2 className="size-4" aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    {(handle) => (
+                      <>
+                        {handle}
+                        <div>
+                          <input
+                            name="linkLabel"
+                            value={link.label}
+                            onChange={(e) => updateLink(link.key, "label", e.target.value)}
+                            placeholder="Apply Here"
+                            aria-label={`Link ${i + 1} label`}
+                            className="input"
+                          />
+                          <FieldError message={errors[`links.${i}.label`]} />
+                        </div>
+                        <div className="col-start-2 sm:col-start-auto">
+                          <input
+                            name="linkUrl"
+                            type="url"
+                            value={link.url}
+                            onChange={(e) => updateLink(link.key, "url", e.target.value)}
+                            placeholder="https://forms.gle/…"
+                            aria-label={`Link ${i + 1} URL`}
+                            className="input"
+                          />
+                          <FieldError message={errors[`links.${i}.url`]} />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeLink(link.key)}
+                          className="col-start-3 row-start-1 rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700 sm:col-start-4"
+                          aria-label={`Remove link ${i + 1}`}
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                        </button>
+                      </>
+                    )}
+                  </SortableItem>
+                ))}
+              </ul>
+            </SortableList>
           )}
         </section>
 
