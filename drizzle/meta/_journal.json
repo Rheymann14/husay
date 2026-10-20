@@ -64,6 +64,13 @@
       "when": 1792478694800,
       "tag": "0008_program_link_enabled",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1792483353449,
+      "tag": "0009_program_slug",
+      "breakpoints": true
     }
   ]
 }

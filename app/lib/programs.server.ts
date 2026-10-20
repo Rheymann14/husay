@@ -1,8 +1,20 @@
-import { and, asc, count, eq, inArray, notInArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  like,
+  notInArray,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { getDb, schema } from "~/db/client.server";
 import { contains, type ListParams } from "~/lib/list-params.server";
+import { slugify } from "~/lib/slug";
 import {
   AUTO_STATUS_KEYS,
   isAutoStatusKey,
@@ -29,6 +41,7 @@ const byDate = [
 
 const listColumns = {
   id: programs.id,
+  slug: programs.slug,
   shortName: programs.shortName,
   title: programs.title,
   startDate: programs.startDate,
@@ -102,25 +115,30 @@ export type ProgramListItem = Awaited<
 >["programs"][number];
 
 /** Full program with its links and extra rows. Returns null when missing (or a draft, for the public). */
-export async function getProgram(id: number, { includeDrafts = false } = {}) {
+export function getProgram(id: number, { includeDrafts = false } = {}) {
+  return loadProgram(eq(programs.id, id), includeDrafts);
+}
+
+/** The published program at /programs/<slug>, or null. */
+export function getProgramBySlug(slug: string) {
+  return loadProgram(eq(programs.slug, slug), false);
+}
+
+async function loadProgram(where: SQL, includeDrafts: boolean) {
   const db = getDb();
-  const [program] = await db
-    .select()
-    .from(programs)
-    .where(eq(programs.id, id))
-    .limit(1);
+  const [program] = await db.select().from(programs).where(where).limit(1);
   if (!program || (!includeDrafts && !program.isPublished)) return null;
 
   const [links, sections, statuses] = await Promise.all([
     db
       .select()
       .from(programLinks)
-      .where(eq(programLinks.programId, id))
+      .where(eq(programLinks.programId, program.id))
       .orderBy(asc(programLinks.sortOrder), asc(programLinks.id)),
     db
       .select()
       .from(programSections)
-      .where(eq(programSections.programId, id))
+      .where(eq(programSections.programId, program.id))
       .orderBy(asc(programSections.sortOrder), asc(programSections.id)),
     listStatuses(),
   ]);
@@ -139,7 +157,7 @@ export async function getProgram(id: number, { includeDrafts = false } = {}) {
 
 export type ProgramInput = Omit<
   typeof programs.$inferInsert,
-  "id" | "createdAt" | "updatedAt"
+  "id" | "slug" | "createdAt" | "updatedAt"
 > & {
   links: { label: string; url: string; isEnabled: boolean }[];
   sections: { heading: string; body: string }[];
@@ -153,7 +171,7 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
   if (programId == null) {
     const [created] = await db
       .insert(programs)
-      .values(values)
+      .values({ ...values, slug: await freeSlug(values.title) })
       .returning({ id: programs.id });
     programId = created.id;
   } else {
@@ -195,6 +213,22 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
   }
   await db.batch(writes);
   return programId;
+}
+
+/** The title's slug, or with "-2", "-3"… added when another program has it. */
+async function freeSlug(title: string) {
+  const base = slugify(title) || "program";
+  const taken = new Set(
+    (
+      await getDb()
+        .select({ slug: programs.slug })
+        .from(programs)
+        .where(or(eq(programs.slug, base), like(programs.slug, `${base}-%`)))
+    ).map((r) => r.slug),
+  );
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+  return slug;
 }
 
 export async function setProgramStatus(id: number, status: StatusSetting) {

@@ -5,9 +5,11 @@
 import { LOGOS, SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { toHtml } from "~/lib/rich-text";
+import { slugify } from "~/lib/slug";
 
 export type BrieferProgram = {
   id: number;
+  slug: string;
   title: string;
   status: { name: string } | null;
   closed: boolean;
@@ -45,15 +47,7 @@ function row(label: string, content: string) {
 
 /** "Program Name" -> "program-name-briefer.pdf". */
 export function brieferFileName(title: string) {
-  const slug = title
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-    .replace(/-+$/, "");
-  return `${slug || "program"}-briefer.pdf`;
+  return `${slugify(title) || "program"}-briefer.pdf`;
 }
 
 /** The full HTML document. `origin` makes the logos and source link absolute. */
@@ -86,7 +80,7 @@ export function brieferDocument(program: BrieferProgram, origin: string) {
             : `<p>${program.closed ? "Applications are closed." : "Applications are not available right now."}</p>`
         }</section>`;
 
-  const source = `${origin}/programs/${program.id}`;
+  const source = `${origin}/programs/${program.slug}`;
   const status = program.status?.name ?? "No status";
 
   return `<!doctype html>

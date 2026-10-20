@@ -1,13 +1,13 @@
 import { ExternalLink, Lock, Printer, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { data, Link, useLocation, useNavigate } from "react-router";
+import { data, Link, redirect, useLocation, useNavigate } from "react-router";
 
 import { BrieferPrintDialog } from "~/components/briefer-print-dialog";
 import { RichText } from "~/components/rich-text";
 import { StatusBadge } from "~/components/status-badge";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
-import { getProgram } from "~/lib/programs.server";
+import { getProgram, getProgramBySlug } from "~/lib/programs.server";
 import { toPlainText } from "~/lib/rich-text";
 import type { Route } from "./+types/program-detail";
 
@@ -25,9 +25,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const id = Number(params.programId);
-  const program = Number.isInteger(id) ? await getProgram(id) : null;
+export async function loader({ params, request }: Route.LoaderArgs) {
+  // Links used to be /programs/<id>; send those to the slug link.
+  if (/^\d+$/.test(params.slug)) {
+    const old = await getProgram(Number(params.slug));
+    if (!old) throw data("Program not found", { status: 404 });
+    throw redirect(`/programs/${old.slug}${new URL(request.url).search}`, 301);
+  }
+  const program = await getProgramBySlug(params.slug);
   if (!program) throw data("Program not found", { status: 404 });
   return { program };
 }
@@ -76,7 +81,7 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
     />
     <aside
       aria-labelledby="program-title"
-      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[44rem] md:shadow-2xl xl:sticky xl:inset-auto xl:top-4 xl:z-auto xl:max-h-[calc(100dvh-9.5rem)] xl:w-auto xl:rounded-lg xl:border xl:border-slate-200 xl:shadow-none"
+      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[44rem] md:shadow-2xl xl:relative xl:inset-auto xl:z-auto xl:max-h-full xl:w-auto xl:rounded-lg xl:border xl:border-slate-200 xl:shadow-none"
     >
       <div className="sticky top-0 z-10 flex items-start gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="min-w-0 flex-1">

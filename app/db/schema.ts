@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 import { STATUS_COLORS, STATUS_ICONS } from "../lib/status";
 
@@ -46,24 +52,31 @@ export const programStatuses = sqliteTable("program_statuses", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
-export const programs = sqliteTable("programs", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  shortName: text("short_name").notNull(),
-  title: text("title").notNull(),
-  startDate: text("start_date"),
-  endDate: text("end_date"),
-  durationDetails: text("duration_details").notNull().default(""),
-  // Where the built-in Duration row sits in the briefer: the number of
-  // program_sections rows shown before it.
-  durationPosition: integer("duration_position").notNull().default(0),
-  // "auto" follows the start and end dates, "none" shows no status, anything
-  // else is a program_statuses key set manually.
-  status: text("status").notNull().default("auto"),
-  isPublished: integer("is_published", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  ...timestamps,
-});
+export const programs = sqliteTable(
+  "programs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // The public link, /programs/<slug>. Set from the title when the program is
+    // created and kept after that, so shared links don't break.
+    slug: text("slug").notNull().default(""),
+    shortName: text("short_name").notNull(),
+    title: text("title").notNull(),
+    startDate: text("start_date"),
+    endDate: text("end_date"),
+    durationDetails: text("duration_details").notNull().default(""),
+    // Where the built-in Duration row sits in the briefer: the number of
+    // program_sections rows shown before it.
+    durationPosition: integer("duration_position").notNull().default(0),
+    // "auto" follows the start and end dates, "none" shows no status, anything
+    // else is a program_statuses key set manually.
+    status: text("status").notNull().default("auto"),
+    isPublished: integer("is_published", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("programs_slug_idx").on(t.slug)],
+);
 
 export const programLinks = sqliteTable(
   "program_links",

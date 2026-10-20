@@ -48,22 +48,23 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { programs, total, page, pageCount, pageSize, query, signedIn } =
     loaderData;
-  const { programId } = useParams();
+  const { slug: selectedSlug } = useParams();
   const { search } = useLocation();
   const navigate = useNavigate();
-  const selectedId = programId ? Number(programId) : null;
   // Nothing published at all, as opposed to a search with no matches.
   const nothingPosted = total === 0 && !query;
 
   // Keep ?q= and ?page= so the list stays put while a briefer is open.
-  const programUrl = (id: number) => `/programs/${id}${search}`;
-  const open = (id: number) =>
-    navigate(programUrl(id), { preventScrollReset: true });
+  const programUrl = (slug: string) => `/programs/${slug}${search}`;
+  const open = (slug: string) =>
+    navigate(programUrl(slug), { preventScrollReset: true });
   // Rows aren't links, so hovering one fetches its briefer here instead.
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    // On wide screens the page fits the window, and the list and the briefer
+    // panel scroll on their own instead of the page.
+    <div className="flex min-h-dvh flex-col xl:h-dvh">
       <SiteHeader
         right={
           <Link
@@ -75,8 +76,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
       />
 
-      <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-4 sm:px-6">
-        <div className="mb-3 grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-4 sm:px-6 xl:flex xl:min-h-0 xl:flex-col">
+        <div className="mb-3 grid gap-4 xl:grid-cols-2">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-base font-semibold text-navy-900">
@@ -92,10 +93,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)]">
           <section
             aria-label="Programs"
-            className={`overflow-hidden rounded-lg border border-slate-200 bg-white ${
+            className={`overflow-hidden rounded-lg border border-slate-200 bg-white xl:max-h-full xl:overflow-y-auto ${
               nothingPosted ? "xl:col-span-2" : ""
             }`}
           >
@@ -121,23 +122,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
                       <tr>
                         <th className="w-10 px-3 py-2">No.</th>
-                        <th className="w-40 px-3 py-2">Program</th>
-                        <th className="min-w-[16rem] px-3 py-2">
+                        <th className="w-32 px-3 py-2">Program</th>
+                        <th className="min-w-[12rem] px-3 py-2">
                           Program Title
                         </th>
                         <th className="px-3 py-2">Duration of Program</th>
                         <th className="px-3 py-2">Status</th>
-                        <th className="w-20 px-3 py-2 text-center">View</th>
+                        <th className="w-16 px-3 py-2 text-center">View</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {programs.map((p, i) => {
-                        const selected = p.id === selectedId;
+                        const selected = p.slug === selectedSlug;
                         return (
                           <tr
                             key={p.id}
-                            onClick={() => open(p.id)}
-                            onMouseEnter={() => setHoveredId(p.id)}
+                            onClick={() => open(p.slug)}
+                            onMouseEnter={() => setHoveredSlug(p.slug)}
                             aria-selected={selected}
                             className={`cursor-pointer transition-colors ${
                               selected
@@ -154,13 +155,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                             <td className="px-3 py-2">
                               {/* The briefer shows it in full; hover shows it here. */}
                               <span
-                                className="line-clamp-2"
+                                className="line-clamp-3"
                                 data-tooltip={p.title}
                               >
                                 {p.title}
                               </span>
                             </td>
-                            <td className="px-3 py-2 whitespace-nowrap text-slate-600">
+                            <td className="min-w-[7rem] px-3 py-2 text-slate-600">
                               {formatDuration(p.startDate, p.endDate)}
                             </td>
                             <td className="px-3 py-2">
@@ -168,7 +169,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                             </td>
                             <td className="px-3 py-2 text-center">
                               <Link
-                                to={programUrl(p.id)}
+                                to={programUrl(p.slug)}
                                 preventScrollReset
                                 prefetch="intent"
                                 onClick={(e) => e.stopPropagation()}
@@ -184,8 +185,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       })}
                     </tbody>
                   </table>
-                  {hoveredId != null && hoveredId !== selectedId && (
-                    <PrefetchPageLinks page={programUrl(hoveredId)} />
+                  {hoveredSlug != null && hoveredSlug !== selectedSlug && (
+                    <PrefetchPageLinks page={programUrl(hoveredSlug)} />
                   )}
                 </div>
 
@@ -194,7 +195,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   {programs.map((p, i) => (
                     <li key={p.id}>
                       <Link
-                        to={programUrl(p.id)}
+                        to={programUrl(p.slug)}
                         preventScrollReset
                         prefetch="intent"
                         className="flex items-start gap-2.5 px-3 py-2.5 active:bg-slate-50"
