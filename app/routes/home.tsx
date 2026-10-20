@@ -66,18 +66,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { programs, total, page, pageCount, pageSize, query, sort, signedIn } =
     loaderData;
-  const { slug: selectedSlug } = useParams();
+  const { trackingNo: selectedNo } = useParams();
   const { search } = useLocation();
   const navigate = useNavigate();
   // Nothing published at all, as opposed to a search with no matches.
   const nothingPosted = total === 0 && !query;
 
   // Keep ?q= and ?page= so the list stays put while a briefer is open.
-  const programUrl = (slug: string) => `/programs/${slug}${search}`;
-  const open = (slug: string) =>
-    navigate(programUrl(slug), { preventScrollReset: true });
+  const programUrl = (trackingNo: string) => `/programs/${trackingNo}${search}`;
+  const open = (trackingNo: string) =>
+    navigate(programUrl(trackingNo), { preventScrollReset: true });
   // Rows aren't links, so hovering one fetches its briefer here instead.
-  const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
+  const [hoveredNo, setHoveredNo] = useState<string | null>(null);
 
   return (
     // On wide screens the page fills at least the window. The list is never
@@ -189,12 +189,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {programs.map((p) => {
-                          const selected = p.slug === selectedSlug;
+                          const selected = p.trackingNo === selectedNo;
                           return (
                             <tr
                               key={p.id}
-                              onClick={() => open(p.slug)}
-                              onMouseEnter={() => setHoveredSlug(p.slug)}
+                              onClick={() => open(p.trackingNo)}
+                              onMouseEnter={() => setHoveredNo(p.trackingNo)}
                               aria-selected={selected}
                               className={`cursor-pointer transition-colors ${
                                 selected
@@ -230,7 +230,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                               </td>
                               <td className="px-2 py-1 text-center">
                                 <Link
-                                  to={programUrl(p.slug)}
+                                  to={programUrl(p.trackingNo)}
                                   preventScrollReset
                                   prefetch="intent"
                                   onClick={(e) => e.stopPropagation()}
@@ -246,8 +246,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                         })}
                       </tbody>
                     </table>
-                    {hoveredSlug != null && hoveredSlug !== selectedSlug && (
-                      <PrefetchPageLinks page={programUrl(hoveredSlug)} />
+                    {hoveredNo != null && hoveredNo !== selectedNo && (
+                      <PrefetchPageLinks page={programUrl(hoveredNo)} />
                     )}
                   </div>
 
@@ -256,7 +256,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     {programs.map((p) => (
                       <li key={p.id}>
                         <Link
-                          to={programUrl(p.slug)}
+                          to={programUrl(p.trackingNo)}
                           preventScrollReset
                           prefetch="intent"
                           className="flex items-start gap-2.5 px-3 py-2.5 active:bg-slate-50"

@@ -50,7 +50,7 @@ export function BrieferPrintDialog({
     setDownloading(true);
     try {
       const { downloadBrieferPdf } = await import("~/lib/briefer-pdf");
-      await downloadBrieferPdf(html, brieferFileName(program.title), program.title);
+      await downloadBrieferPdf(html, brieferFileName(program.trackingNo), program.title);
     } catch (error) {
       console.error(error);
       showToast({ type: "error", message: "Couldn't create the PDF. Please try again." });

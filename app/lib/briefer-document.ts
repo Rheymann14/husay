@@ -5,11 +5,10 @@
 import { LOGOS, SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { toHtml } from "~/lib/rich-text";
-import { slugify } from "~/lib/slug";
 
 export type BrieferProgram = {
   id: number;
-  slug: string;
+  trackingNo: string;
   title: string;
   status: { name: string } | null;
   closed: boolean;
@@ -45,9 +44,9 @@ function row(label: string, content: string) {
   return `<tr><th scope="row">${escapeHtml(label)}</th><td>${content}</td></tr>`;
 }
 
-/** "Program Name" -> "program-name-briefer.pdf". */
-export function brieferFileName(title: string) {
-  return `${slugify(title) || "program"}-briefer.pdf`;
+/** "HUSAY-2026-0007" -> "HUSAY-2026-0007-briefer.pdf". */
+export function brieferFileName(trackingNo: string) {
+  return `${trackingNo}-briefer.pdf`;
 }
 
 /** The full HTML document. `origin` makes the logos and source link absolute. */
@@ -80,7 +79,7 @@ export function brieferDocument(program: BrieferProgram, origin: string) {
             : `<p>${program.closed ? "Applications are closed." : "Applications are not available right now."}</p>`
         }</section>`;
 
-  const source = `${origin}/programs/${program.slug}`;
+  const source = `${origin}/programs/${program.trackingNo}`;
   const status = program.status?.name ?? "No status";
 
   return `<!doctype html>
@@ -104,7 +103,7 @@ export function brieferDocument(program: BrieferProgram, origin: string) {
     </div>
   </header>
   <h1>Program Briefer</h1>
-  <p class="meta">Status: <strong>${escapeHtml(status)}</strong></p>
+  <p class="meta">Tracking No.: <strong>${escapeHtml(program.trackingNo)}</strong> &middot; Status: <strong>${escapeHtml(status)}</strong></p>
   <table class="briefer"><tbody>${rows}</tbody></table>
   ${apply}
   <footer>Source: ${escapeHtml(source)} &middot; Printed ${printedOn.format(new Date())}</footer>

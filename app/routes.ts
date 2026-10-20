@@ -10,7 +10,7 @@ export default [
   // Public landing page: program list with the briefer in a right-side panel.
   route("/", "routes/home.tsx", [
     index("routes/home-index.tsx"),
-    route("programs/:slug", "routes/program-detail.tsx"),
+    route("programs/:trackingNo", "routes/program-detail.tsx"),
   ]),
 
   route("login", "routes/login.tsx"),

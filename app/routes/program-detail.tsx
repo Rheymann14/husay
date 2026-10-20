@@ -7,12 +7,9 @@ import { RichText } from "~/components/rich-text";
 import { StatusBadge } from "~/components/status-badge";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
-import {
-  getProgram,
-  getProgramBySlug,
-  getRenamedSlug,
-} from "~/lib/programs.server";
+import { getProgram, trackingNumberForSlug } from "~/lib/programs.server";
 import { toPlainText } from "~/lib/rich-text";
+import { idFromTrackingNumber } from "~/lib/tracking";
 import type { Route } from "./+types/program-detail";
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -30,20 +27,23 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {
-  // Links used to be /programs/<id>; send those to the slug link.
-  if (/^\d+$/.test(params.slug)) {
-    const old = await getProgram(Number(params.slug));
-    if (!old) throw data("Program not found", { status: 404 });
-    throw redirect(`/programs/${old.slug}${new URL(request.url).search}`, 301);
-  }
-  const program = await getProgramBySlug(params.slug);
-  if (!program) {
-    // A link from before the title changed. Not 301: the title could change
-    // back, and a cached permanent redirect would then loop.
-    const slug = await getRenamedSlug(params.slug);
-    if (slug) throw redirect(`/programs/${slug}${new URL(request.url).search}`);
+  const { trackingNo } = params;
+  const moveTo = (to: string) =>
+    redirect(`/programs/${to}${new URL(request.url).search}`, 301);
+
+  // Links used to be /programs/<id>, then /programs/<slug of the title>.
+  const id = /^\d+$/.test(trackingNo)
+    ? Number(trackingNo)
+    : idFromTrackingNumber(trackingNo);
+  if (id == null) {
+    const to = await trackingNumberForSlug(trackingNo);
+    if (to) throw moveTo(to);
     throw data("Program not found", { status: 404 });
   }
+  const program = await getProgram(id);
+  if (!program) throw data("Program not found", { status: 404 });
+  // An id link, or the number in lower case or with the wrong year.
+  if (trackingNo !== program.trackingNo) throw moveTo(program.trackingNo);
   return { program };
 }
 
@@ -106,8 +106,12 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
           >
             {program.title}
           </h2>
-          <div className="mt-1.5">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <StatusBadge status={program.status} />
+            <span className="text-xs text-slate-500">
+              Tracking No.{" "}
+              <span className="font-medium text-slate-700">{program.trackingNo}</span>
+            </span>
           </div>
         </div>
         <div className="-mr-1.5 flex items-center gap-0.5">

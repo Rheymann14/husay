@@ -56,9 +56,9 @@ export const programs = sqliteTable(
   "programs",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    // The public link, /programs/<slug>, made from the title. When the title
-    // changes so does the slug; the old one goes in program_old_slugs so shared
-    // links still work.
+    // Made from the title. Public links were /programs/<slug> before they used
+    // the tracking number (lib/tracking.ts); the slug and program_old_slugs
+    // now only redirect those older links.
     slug: text("slug").notNull().default(""),
     shortName: text("short_name").notNull(),
     title: text("title").notNull(),

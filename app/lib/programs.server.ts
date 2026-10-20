@@ -15,6 +15,7 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { getDb, schema } from "~/db/client.server";
 import { contains, type ListParams } from "~/lib/list-params.server";
 import { slugify } from "~/lib/slug";
+import { trackingNumber } from "~/lib/tracking";
 import {
   AUTO_STATUS_KEYS,
   isAutoStatusKey,
@@ -47,7 +48,7 @@ const byDate = [
 
 const listColumns = {
   id: programs.id,
-  slug: programs.slug,
+  createdAt: programs.createdAt,
   shortName: programs.shortName,
   title: programs.title,
   startDate: programs.startDate,
@@ -145,6 +146,7 @@ export async function searchPrograms(
   const today = todayInManila();
   const numbered = rows.map((r, i) => ({
     ...withStatus(r, statuses, today),
+    trackingNo: trackingNumber(r),
     no: (byDefault ? offset : 0) + i + 1,
   }));
   if (!byDefault) {
@@ -186,20 +188,26 @@ export function getProgram(id: number, { includeDrafts = false } = {}) {
   return loadProgram(eq(programs.id, id), includeDrafts);
 }
 
-/** The published program at /programs/<slug>, or null. */
-export function getProgramBySlug(slug: string) {
-  return loadProgram(eq(programs.slug, slug), false);
-}
-
-/** The current slug of the program that used to be at `oldSlug`, or null. */
-export async function getRenamedSlug(oldSlug: string) {
-  const [row] = await getDb()
-    .select({ slug: programs.slug })
+/**
+ * The tracking number of the program that has this slug, or had it before a
+ * title change, or null. Public links used to be /programs/<slug>.
+ */
+export async function trackingNumberForSlug(slug: string) {
+  const db = getDb();
+  const columns = { id: programs.id, createdAt: programs.createdAt };
+  const [current] = await db
+    .select(columns)
+    .from(programs)
+    .where(eq(programs.slug, slug))
+    .limit(1);
+  if (current) return trackingNumber(current);
+  const [renamed] = await db
+    .select(columns)
     .from(programOldSlugs)
     .innerJoin(programs, eq(programs.id, programOldSlugs.programId))
-    .where(eq(programOldSlugs.slug, oldSlug))
+    .where(eq(programOldSlugs.slug, slug))
     .limit(1);
-  return row?.slug ?? null;
+  return renamed ? trackingNumber(renamed) : null;
 }
 
 async function loadProgram(where: SQL, includeDrafts: boolean) {
@@ -229,6 +237,7 @@ async function loadProgram(where: SQL, includeDrafts: boolean) {
   );
   return {
     ...withStatuses,
+    trackingNo: trackingNumber(program),
     closed,
     // `isEnabled` is the admin's toggle; `isActive` is whether visitors can use it.
     links: links.map((link) => ({
