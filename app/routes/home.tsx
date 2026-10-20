@@ -1,4 +1,4 @@
-import { ChevronRight, Eye, GraduationCap, SearchX } from "lucide-react";
+import { CalendarClock, ChevronRight, Eye, SearchX } from "lucide-react";
 import {
   Link,
   Outlet,
@@ -98,7 +98,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             {nothingPosted ? (
               <EmptyState
                 size="lg"
-                icon={GraduationCap}
+                icon={CalendarClock}
                 title="No programs posted yet"
                 description="HUSAY programs will be listed here once they are announced, each with a briefer and how to apply. Please check back soon."
               />
