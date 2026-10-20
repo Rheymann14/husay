@@ -3,7 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 export type ListParams = { query: string; page: number; pageSize: number };
 
-/** Reads ?q= and ?page= for a searchable, paged admin list. */
+/** Reads ?q= and ?page= for a searchable, paged list. */
 export function getListParams(request: Request, pageSize = 10): ListParams {
   const url = new URL(request.url);
   const query = (url.searchParams.get("q") ?? "").trim().slice(0, 100);

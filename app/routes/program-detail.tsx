@@ -1,6 +1,6 @@
 import { ExternalLink, X } from "lucide-react";
 import { useEffect } from "react";
-import { data, Link, useNavigate } from "react-router";
+import { data, Link, useLocation, useNavigate } from "react-router";
 
 import { RichText } from "~/components/rich-text";
 import { StatusBadge } from "~/components/status-badge";
@@ -48,21 +48,23 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
   const { program } = loaderData;
   const navigate = useNavigate();
+  // Closing goes back to the list with the same search and page.
+  const closeTo = `/${useLocation().search}`;
   const sectionsBefore = program.sections.slice(0, program.durationPosition);
   const sectionsAfter = program.sections.slice(program.durationPosition);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") navigate("/", { preventScrollReset: true });
+      if (e.key === "Escape") navigate(closeTo, { preventScrollReset: true });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate]);
+  }, [navigate, closeTo]);
 
   return (
     <>
     <Link
-      to="/"
+      to={closeTo}
       preventScrollReset
       aria-hidden
       tabIndex={-1}
@@ -88,7 +90,7 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
         <Link
-          to="/"
+          to={closeTo}
           preventScrollReset
           className="-mr-1.5 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
           aria-label="Close program details"

@@ -1,6 +1,12 @@
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Form, Link, useSearchParams, useSubmit } from "react-router";
+import {
+  Form,
+  Link,
+  useLocation,
+  useSearchParams,
+  useSubmit,
+} from "react-router";
 
 /** Search box that filters the list as you type, through ?q= in the URL. */
 export function SearchBox({
@@ -12,6 +18,7 @@ export function SearchBox({
 }) {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
+  const { pathname } = useLocation();
   const submit = useSubmit();
   const inputRef = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -23,12 +30,17 @@ export function SearchBox({
   }, [query]);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  // Submitting only ?q= also takes the list back to page 1.
+  // Submitting only ?q= also takes the list back to page 1. It stays on the
+  // current path, so an open child route (like a program briefer) stays open.
+  const go = (value: string) =>
+    submit(value.trim() ? { q: value } : {}, {
+      action: pathname,
+      replace: true,
+      preventScrollReset: true,
+    });
   const search = (value: string) => {
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      submit(value.trim() ? { q: value } : {}, { replace: true });
-    }, 300);
+    timer.current = setTimeout(() => go(value), 300);
   };
 
   return (
@@ -61,7 +73,7 @@ export function SearchBox({
           onClick={() => {
             if (inputRef.current) inputRef.current.value = "";
             clearTimeout(timer.current);
-            submit({}, { replace: true });
+            go("");
             inputRef.current?.focus();
           }}
           className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
@@ -106,6 +118,7 @@ export function Pagination({
   noun: string;
 }) {
   const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
   if (total === 0) return null;
 
   const to = (p: number) => {
@@ -113,7 +126,7 @@ export function Pagination({
     if (p === 1) next.delete("page");
     else next.set("page", String(p));
     const qs = next.toString();
-    return qs ? `?${qs}` : ".";
+    return qs ? `${pathname}?${qs}` : pathname;
   };
   const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);

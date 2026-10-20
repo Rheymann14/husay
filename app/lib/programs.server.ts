@@ -1,4 +1,4 @@
-import { asc, count, eq, inArray, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, notInArray, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { getDb, schema } from "~/db/client.server";
@@ -54,28 +54,21 @@ function withStatus<
   };
 }
 
-/** Published programs for the landing page table. */
-export async function listPrograms() {
-  const [rows, statuses] = await Promise.all([
-    getDb()
-      .select(listColumns)
-      .from(programs)
-      .where(eq(programs.isPublished, true))
-      .orderBy(...byDate),
-    listStatuses(),
-  ]);
-  const today = todayInManila();
-  return rows.map((r) => withStatus(r, statuses, today));
-}
-
-export type ProgramListItem = Awaited<ReturnType<typeof listPrograms>>[number];
-
-/** One page of programs (drafts included) matching the search, for admins. */
-export async function searchPrograms({ query, page, pageSize }: ListParams) {
+/**
+ * One page of programs matching the search. Admins see drafts too; the
+ * landing page passes `publishedOnly`.
+ */
+export async function searchPrograms(
+  { query, page, pageSize }: ListParams,
+  { publishedOnly = false } = {},
+) {
   const db = getDb();
-  const where = query
-    ? or(contains(programs.shortName, query), contains(programs.title, query))
-    : undefined;
+  const where = and(
+    publishedOnly ? eq(programs.isPublished, true) : undefined,
+    query
+      ? or(contains(programs.shortName, query), contains(programs.title, query))
+      : undefined,
+  );
   const [{ total }] = await db
     .select({ total: count() })
     .from(programs)
@@ -102,6 +95,10 @@ export async function searchPrograms({ query, page, pageSize }: ListParams) {
     pageSize,
   };
 }
+
+export type ProgramListItem = Awaited<
+  ReturnType<typeof searchPrograms>
+>["programs"][number];
 
 /** Full program with its links and extra rows. Returns null when missing (or a draft, for the public). */
 export async function getProgram(id: number, { includeDrafts = false } = {}) {
