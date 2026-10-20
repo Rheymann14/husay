@@ -79,9 +79,11 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
       tabIndex={-1}
       className="fixed inset-0 z-30 hidden bg-slate-900/40 md:block xl:hidden"
     />
+    {/* On wide screens h-0 + min-h-full makes the panel exactly as tall as
+        the list beside it without stretching that row; it scrolls instead. */}
     <aside
       aria-labelledby="program-title"
-      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[44rem] md:shadow-2xl xl:relative xl:inset-auto xl:z-auto xl:max-h-full xl:w-auto xl:rounded-lg xl:border xl:border-slate-200 xl:shadow-none"
+      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[44rem] md:shadow-2xl xl:relative xl:inset-auto xl:z-auto xl:h-0 xl:min-h-full xl:w-auto xl:rounded-lg xl:border xl:border-slate-200 xl:shadow-none"
     >
       <div className="sticky top-0 z-10 flex items-start gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="min-w-0 flex-1">

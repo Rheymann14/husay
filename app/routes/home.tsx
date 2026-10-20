@@ -43,7 +43,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  // Rows are compact, so a page of 10 fits beside the briefer without scrolling.
+  // Rows are compact, so a page of 10 fits beside the briefer on most screens.
   const params = getListParams(request, 10);
   const sort = getProgramSort(request);
   const [{ programs, total, page, pageCount, pageSize }, user] =
@@ -80,9 +80,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
   return (
-    // On wide screens the page fits the window, and the list and the briefer
-    // panel scroll on their own instead of the page.
-    <div className="flex min-h-dvh flex-col xl:h-dvh">
+    // On wide screens the page fills at least the window. The list is never
+    // cut off; if a page of it is taller than the window, the page grows and
+    // the briefer panel beside it scrolls on its own.
+    <div className="flex min-h-dvh flex-col">
       <SiteHeader
         right={
           <Link
@@ -94,7 +95,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
       />
 
-      <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-4 sm:px-6 xl:flex xl:min-h-0 xl:flex-col">
+      <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-4 sm:px-6 xl:flex xl:flex-col">
         <div className="mb-3 grid gap-4 xl:grid-cols-2">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -122,17 +123,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        <div className="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)]">
+        <div className="grid items-start gap-4 xl:flex-1 xl:grid-cols-2 xl:grid-rows-[1fr]">
           <section
             aria-label="Programs"
             className={`overflow-hidden rounded-lg border border-slate-200 bg-white xl:flex xl:h-full xl:flex-col ${
               nothingPosted ? "xl:col-span-2" : ""
             }`}
           >
-            {/* The list is as tall as the briefer beside it, with the pager at
-                the bottom. Pages are short enough to fit; scrolling is only a
-                fallback for very short windows. */}
-            <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
+            {/* The list sets the height of the row, with the pager at the
+                bottom; it never scrolls on its own. */}
+            <div className="xl:flex-1">
               {nothingPosted ? (
                 <EmptyState
                   size="lg"
