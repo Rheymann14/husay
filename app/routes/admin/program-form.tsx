@@ -19,7 +19,7 @@ import {
   saveProgram,
 } from "~/lib/programs.server";
 import { sanitizeHtml } from "~/lib/sanitize-html.server";
-import { statusFromDates, todayInManila } from "~/lib/status";
+import { isProgramClosed, statusFromDates, todayInManila } from "~/lib/status";
 import { redirectWithToast } from "~/lib/toast.server";
 import type { Route } from "./+types/program-form";
 
@@ -73,6 +73,7 @@ const programSchema = z
           .trim()
           .url("Enter a full link starting with https://")
           .refine((v) => /^https?:\/\//i.test(v), "Link must start with http:// or https://"),
+        isEnabled: z.boolean(),
       }),
     ),
     sections: z.array(
@@ -94,8 +95,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   const labels = form.getAll("linkLabel").map(String);
   const urls = form.getAll("linkUrl").map(String);
+  const enabled = form.getAll("linkEnabled").map(String);
   const links = labels
-    .map((label, i) => ({ label, url: urls[i] ?? "" }))
+    .map((label, i) => ({ label, url: urls[i] ?? "", isEnabled: enabled[i] !== "off" }))
     .filter((l) => l.label.trim() || l.url.trim());
 
   // Briefer rows, in form order. Blank rows are dropped; `index` keeps the
@@ -152,6 +154,54 @@ export async function action({ request, params }: Route.ActionArgs) {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="mt-1 text-xs text-red-700">{message}</p>;
+}
+
+/** On/off switch for an application link. */
+function LinkSwitch({
+  checked,
+  disabled,
+  onToggle,
+  label,
+  className = "",
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+  label: string;
+  className?: string;
+}) {
+  // The tooltip sits on a wrapper: disabled buttons get no pointer events.
+  return (
+    <span
+      className={`flex h-[34px] items-center px-1 ${className}`}
+      data-tooltip={
+        disabled
+          ? "Disabled while the program is closed"
+          : checked
+            ? "Enabled on the landing page"
+            : "Disabled on the landing page"
+      }
+    >
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={onToggle}
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
+          checked ? "bg-navy-700" : "bg-slate-300"
+        }`}
+      >
+        <span
+          aria-hidden
+          className={`inline-block size-4 rounded-full bg-white shadow transition-transform ${
+            checked ? "translate-x-[18px]" : "translate-x-0.5"
+          }`}
+        />
+      </button>
+    </span>
+  );
 }
 
 // Suggested rows for a new program, following the program briefer template.
@@ -216,6 +266,7 @@ export default function ProgramForm({
       key: i,
       label: l.label,
       url: l.url,
+      isEnabled: l.isEnabled,
       isNew: false,
     })),
   );
@@ -228,6 +279,7 @@ export default function ProgramForm({
         key: nextKey,
         label: rows.length === 0 ? "Apply Here" : "",
         url: "",
+        isEnabled: true,
         isNew: true,
       },
     ]);
@@ -236,6 +288,10 @@ export default function ProgramForm({
   const updateLink = (key: number, field: "label" | "url", value: string) =>
     setLinks((rows) =>
       rows.map((r) => (r.key === key ? { ...r, [field]: value } : r)),
+    );
+  const toggleLink = (key: number) =>
+    setLinks((rows) =>
+      rows.map((r) => (r.key === key ? { ...r, isEnabled: !r.isEnabled } : r)),
     );
   const removeLink = (key: number) =>
     setLinks((rows) => rows.filter((r) => r.key !== key));
@@ -270,8 +326,15 @@ export default function ProgramForm({
 
   const durationPosition = rows.findIndex((r) => r.kind === "duration");
 
-  const defaultStatus = v?.status ?? program?.statusSetting ?? "auto";
+  const [statusSetting, setStatusSetting] = useState(
+    v?.status ?? program?.statusSetting ?? "auto",
+  );
   const autoStatus = statusFromDates(startDate || null, endDate || null, today);
+  // Mirrors the server: links are disabled while the program is closed.
+  const linksClosed = isProgramClosed(
+    statusSetting === "auto" ? autoStatus : statusSetting,
+    autoStatus,
+  );
 
   // Index among the custom rows, which is how the server reports row errors.
   let rowIndex = -1;
@@ -354,7 +417,8 @@ export default function ProgramForm({
               <span className="mt-1 block">
                 <Combobox
                   name="status"
-                  defaultValue={defaultStatus}
+                  value={statusSetting}
+                  onChange={setStatusSetting}
                   options={statusOptions(statuses, autoStatus)}
                   footer={statusSettings.footer}
                   searchPlaceholder="Search statuses…"
@@ -494,6 +558,7 @@ export default function ProgramForm({
               <h2 className="font-semibold text-slate-900">Application links</h2>
               <p className="text-xs text-slate-500">
                 Shown as buttons at the bottom of the briefer, e.g. “Apply Here”.
+                Switch a link off to show its button as disabled.
               </p>
             </div>
             <button type="button" onClick={addLink} className="btn-secondary">
@@ -501,6 +566,14 @@ export default function ProgramForm({
               Add link
             </button>
           </div>
+          {linksClosed && links.length > 0 && (
+            <p className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+              <Lock className="mt-px size-3.5 shrink-0" aria-hidden />
+              This program is closed, so all its links are disabled on the
+              landing page. Move the end date or change the status to turn them
+              back on.
+            </p>
+          )}
           {links.length === 0 ? (
             <EmptyState
               size="sm"
@@ -517,7 +590,7 @@ export default function ProgramForm({
                     key={link.key}
                     id={linkId(link)}
                     handleLabel={`Drag to reorder link ${i + 1}`}
-                    className={`grid grid-cols-[auto_1fr_auto] items-start gap-2 rounded-md border p-1.5 sm:grid-cols-[auto_12rem_1fr_auto] ${
+                    className={`grid grid-cols-[auto_1fr_auto_auto] items-start gap-2 rounded-md border p-1.5 sm:grid-cols-[auto_12rem_1fr_auto_auto] ${
                       link.isNew ? newRowHighlight : "border-transparent bg-white"
                     }`}
                   >
@@ -547,10 +620,22 @@ export default function ProgramForm({
                           />
                           <FieldError message={errors[`links.${i}.url`]} />
                         </div>
+                        <input
+                          type="hidden"
+                          name="linkEnabled"
+                          value={link.isEnabled ? "on" : "off"}
+                        />
+                        <LinkSwitch
+                          checked={link.isEnabled && !linksClosed}
+                          disabled={linksClosed}
+                          onToggle={() => toggleLink(link.key)}
+                          label={`Link ${i + 1} enabled`}
+                          className="col-start-3 row-start-1 sm:col-start-4"
+                        />
                         <button
                           type="button"
                           onClick={() => removeLink(link.key)}
-                          className="col-start-3 row-start-1 rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700 sm:col-start-4"
+                          className="col-start-4 row-start-1 rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700 sm:col-start-5"
                           aria-label={`Remove link ${i + 1}`}
                           data-tooltip="Remove link"
                         >

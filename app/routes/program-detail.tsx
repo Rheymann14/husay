@@ -1,4 +1,4 @@
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, Lock, X } from "lucide-react";
 import { useEffect } from "react";
 import { data, Link, useLocation, useNavigate } from "react-router";
 
@@ -131,18 +131,34 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
       {program.links.length > 0 && (
         <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur">
           <div className="flex flex-wrap gap-2">
-            {program.links.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-md bg-navy-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-800 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:outline-none"
-              >
-                {link.label}
-                <ExternalLink className="size-3.5" aria-hidden />
-              </a>
-            ))}
+            {program.links.map((link) =>
+              link.isActive ? (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-navy-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-800 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:outline-none"
+                >
+                  {link.label}
+                  <ExternalLink className="size-3.5" aria-hidden />
+                </a>
+              ) : (
+                // A span rather than a disabled button so the tooltip still shows.
+                <span
+                  key={link.id}
+                  role="link"
+                  aria-disabled="true"
+                  data-tooltip={
+                    program.closed ? "Applications are closed" : "Not available right now"
+                  }
+                  className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500"
+                >
+                  {link.label}
+                  <Lock className="size-3.5" aria-hidden />
+                </span>
+              ),
+            )}
           </div>
         </div>
       )}

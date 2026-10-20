@@ -6,6 +6,7 @@ import { contains, type ListParams } from "~/lib/list-params.server";
 import {
   AUTO_STATUS_KEYS,
   isAutoStatusKey,
+  isProgramClosed,
   resolveStatus,
   statusFromDates,
   todayInManila,
@@ -125,9 +126,13 @@ export async function getProgram(id: number, { includeDrafts = false } = {}) {
   ]);
 
   const { status: statusSetting, ...rest } = program;
+  const withStatuses = withStatus({ ...rest, statusSetting }, statuses);
+  const closed = isProgramClosed(withStatuses.status?.key, withStatuses.autoStatus);
   return {
-    ...withStatus({ ...rest, statusSetting }, statuses),
-    links,
+    ...withStatuses,
+    closed,
+    // `isEnabled` is the admin's toggle; `isActive` is whether visitors can use it.
+    links: links.map((link) => ({ ...link, isActive: link.isEnabled && !closed })),
     sections,
   };
 }
@@ -136,7 +141,7 @@ export type ProgramInput = Omit<
   typeof programs.$inferInsert,
   "id" | "createdAt" | "updatedAt"
 > & {
-  links: { label: string; url: string }[];
+  links: { label: string; url: string; isEnabled: boolean }[];
   sections: { heading: string; body: string }[];
 };
 
@@ -170,6 +175,7 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
           programId: programId!,
           label: link.label,
           url: link.url,
+          isEnabled: link.isEnabled,
           sortOrder: i + 1,
         })),
       ),

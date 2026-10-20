@@ -60,6 +60,17 @@ export function statusFromDates(
   return "ongoing";
 }
 
+/**
+ * Closed once the end date has passed or the status is set to Closed.
+ * Application links are disabled while a program is closed.
+ */
+export function isProgramClosed(
+  statusKey: string | null | undefined,
+  autoStatus: AutoStatusKey | null,
+) {
+  return statusKey === "closed" || autoStatus === "closed";
+}
+
 /** The status visitors see, or null for none. */
 export function resolveStatus(
   setting: StatusSetting,

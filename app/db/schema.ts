@@ -74,6 +74,11 @@ export const programLinks = sqliteTable(
       .references(() => programs.id, { onDelete: "cascade" }),
     label: text("label").notNull(),
     url: text("url").notNull(),
+    // Turned off links show as disabled buttons. All links are also disabled
+    // while the program is closed, whatever this says.
+    isEnabled: integer("is_enabled", { mode: "boolean" })
+      .notNull()
+      .default(true),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [index("program_links_program_id_idx").on(t.programId)],

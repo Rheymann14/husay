@@ -1,0 +1,1 @@
+ALTER TABLE `program_links` ADD `is_enabled` integer DEFAULT true NOT NULL;
