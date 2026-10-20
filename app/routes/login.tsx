@@ -1,10 +1,21 @@
 import { eq } from "drizzle-orm";
-import { data, Form, redirect, useNavigation } from "react-router";
+import {
+  ArrowLeft,
+  CircleAlert,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  Lock,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
+import { useState } from "react";
+import { data, Form, Link, redirect, useNavigation } from "react-router";
 
 import { SiteHeader } from "~/components/site-header";
 import { getDb, schema } from "~/db/client.server";
 import { createSession, getUser, safeRedirect } from "~/lib/auth.server";
-import { SITE } from "~/lib/branding";
+import { LOGOS, SITE } from "~/lib/branding";
 import { verifyPassword } from "~/lib/password";
 import type { Route } from "./+types/login";
 
@@ -53,52 +64,118 @@ export default function Login({
   const navigation = useNavigation();
   const busy = navigation.state !== "idle";
   const { redirectTo } = loaderData;
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
-      <main className="flex flex-1 items-start justify-center px-4 py-10">
-        <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-5">
-          <h1 className="text-base font-semibold text-navy-900">
-            Program manager sign in
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            For CHED staff who manage HUSAY programs.
-          </p>
-
-          <Form method="post" className="mt-4 space-y-3">
-            <input type="hidden" name="redirectTo" value={redirectTo} />
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Email</span>
-              <input
-                name="email"
-                type="email"
-                autoComplete="username"
-                required
-                defaultValue={actionData?.email}
-                className="input mt-1"
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:pb-24">
+        <div className="w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="p-6">
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={LOGOS.ched.src}
+                alt={LOGOS.ched.alt}
+                width={56}
+                height={56}
+                className="size-14"
               />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Password</span>
-              <input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="input mt-1"
-              />
-            </label>
-            {actionData?.error && (
-              <p role="alert" className="text-sm text-red-700">
-                {actionData.error}
+              <h1 className="mt-3 text-lg font-semibold text-navy-900">
+                Sign in to {SITE.name}
+              </h1>
+              <p className="mt-0.5 text-sm text-slate-500">
+                For CHED staff who manage HUSAY programs.
               </p>
-            )}
-            <button type="submit" disabled={busy} className="btn-primary w-full">
-              {busy ? "Signing in…" : "Sign in"}
-            </button>
-          </Form>
+            </div>
+
+            <Form method="post" className="mt-6 space-y-4">
+              <input type="hidden" name="redirectTo" value={redirectTo} />
+
+              {actionData?.error && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                >
+                  <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {actionData.error}
+                </div>
+              )}
+
+              <label className="block">
+                <span className="label">Email</span>
+                <span className="relative mt-1 block">
+                  <Mail
+                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
+                    aria-hidden
+                  />
+                  <input
+                    name="email"
+                    type="email"
+                    autoComplete="username"
+                    placeholder="name@ched.gov.ph"
+                    required
+                    autoFocus
+                    defaultValue={actionData?.email}
+                    className="input py-2 pl-9"
+                  />
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="label">Password</span>
+                <span className="relative mt-1 block">
+                  <Lock
+                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
+                    aria-hidden
+                  />
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    className="input py-2 pr-9 pl-9"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-navy-100 focus-visible:outline-none"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-4" aria-hidden />
+                    ) : (
+                      <Eye className="size-4" aria-hidden />
+                    )}
+                  </button>
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="btn-primary w-full py-2"
+              >
+                {busy && (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                )}
+                {busy ? "Signing in…" : "Sign in"}
+              </button>
+            </Form>
+          </div>
+          <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 bg-slate-50 px-6 py-2.5 text-xs text-slate-500">
+            <ShieldCheck className="size-3.5 text-navy-600" aria-hidden />
+            Authorized CHED personnel only
+          </p>
         </div>
+
+        <Link
+          to="/"
+          className="mt-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-navy-800"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden />
+          Back to programs
+        </Link>
       </main>
     </div>
   );

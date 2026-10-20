@@ -36,14 +36,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         right={
           <Link
             to={signedIn ? "/admin" : "/login"}
-            className="shrink-0 rounded-md px-2.5 py-1 text-sm font-medium text-navy-700 hover:bg-navy-50"
+            className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-navy-700 hover:bg-navy-50"
           >
             {signedIn ? "Manage" : "Sign in"}
           </Link>
         }
       />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6">
+      <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-4 sm:px-6">
         <div className="mb-3">
           <h1 className="text-base font-semibold text-navy-900">
             List of HUSAY Programs
@@ -53,7 +53,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </p>
         </div>
 
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="grid items-start gap-4 xl:grid-cols-2">
           <section
             aria-label="Programs"
             className="overflow-x-auto rounded-lg border border-slate-200 bg-white"

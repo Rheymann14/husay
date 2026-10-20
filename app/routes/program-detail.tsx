@@ -63,7 +63,7 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
     />
     <aside
       aria-labelledby="program-title"
-      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[36rem] md:shadow-2xl xl:sticky xl:inset-auto xl:top-4 xl:z-auto xl:max-h-[calc(100dvh-8.5rem)] xl:w-auto xl:rounded-lg xl:border xl:border-slate-200 xl:shadow-none"
+      className="fixed inset-0 z-40 overflow-y-auto bg-white md:left-auto md:w-[44rem] md:shadow-2xl xl:sticky xl:inset-auto xl:top-4 xl:z-auto xl:max-h-[calc(100dvh-9.5rem)] xl:w-auto xl:rounded-lg xl:border xl:border-slate-200 xl:shadow-none"
     >
       <div className="sticky top-0 z-10 flex items-start gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="min-w-0 flex-1">

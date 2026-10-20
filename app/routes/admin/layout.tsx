@@ -35,7 +35,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         }
       />
       <nav className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 sm:px-6">
+        <div className="mx-auto flex max-w-[88rem] items-center gap-1 overflow-x-auto px-4 sm:px-6">
           {tabs.map((tab) => (
             <NavLink
               key={tab.to}
@@ -74,7 +74,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
       </nav>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6">
+      <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-4 sm:px-6">
         <Outlet />
       </main>
     </div>
