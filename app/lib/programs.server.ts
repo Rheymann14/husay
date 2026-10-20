@@ -15,7 +15,7 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { getDb, schema } from "~/db/client.server";
 import { contains, type ListParams } from "~/lib/list-params.server";
 import { slugify } from "~/lib/slug";
-import { trackingNumber } from "~/lib/tracking";
+import { newTrackingNumber } from "~/lib/tracking";
 import {
   AUTO_STATUS_KEYS,
   isAutoStatusKey,
@@ -46,12 +46,10 @@ const byDate = [
   asc(programs.id),
 ];
 
-// trackingNumber() in SQL, so a search can match "HUSAY-2026-0007" or part of it.
-const trackingNoSql = sql`'HUSAY-' || substr(${programs.createdAt}, 1, 4) || '-' || printf('%04d', ${programs.id})`;
 
 const listColumns = {
   id: programs.id,
-  createdAt: programs.createdAt,
+  trackingNo: programs.trackingNo,
   shortName: programs.shortName,
   title: programs.title,
   startDate: programs.startDate,
@@ -126,7 +124,7 @@ export async function searchPrograms(
       ? or(
           contains(programs.shortName, query),
           contains(programs.title, query),
-          contains(trackingNoSql, query),
+          contains(programs.trackingNo, query),
         )
       : undefined,
   );
@@ -153,7 +151,6 @@ export async function searchPrograms(
   const today = todayInManila();
   const numbered = rows.map((r, i) => ({
     ...withStatus(r, statuses, today),
-    trackingNo: trackingNumber(r),
     no: (byDefault ? offset : 0) + i + 1,
   }));
   if (!byDefault) {
@@ -195,26 +192,37 @@ export function getProgram(id: number, { includeDrafts = false } = {}) {
   return loadProgram(eq(programs.id, id), includeDrafts);
 }
 
+/** Like getProgram(), by tracking number (in any letter case). */
+export function getProgramByTrackingNo(
+  trackingNo: string,
+  { includeDrafts = false } = {},
+) {
+  return loadProgram(
+    eq(programs.trackingNo, trackingNo.toUpperCase()),
+    includeDrafts,
+  );
+}
+
 /**
  * The tracking number of the program that has this slug, or had it before a
  * title change, or null. Public links used to be /programs/<slug>.
  */
 export async function trackingNumberForSlug(slug: string) {
   const db = getDb();
-  const columns = { id: programs.id, createdAt: programs.createdAt };
+  const columns = { trackingNo: programs.trackingNo };
   const [current] = await db
     .select(columns)
     .from(programs)
     .where(eq(programs.slug, slug))
     .limit(1);
-  if (current) return trackingNumber(current);
+  if (current) return current.trackingNo;
   const [renamed] = await db
     .select(columns)
     .from(programOldSlugs)
     .innerJoin(programs, eq(programs.id, programOldSlugs.programId))
     .where(eq(programOldSlugs.slug, slug))
     .limit(1);
-  return renamed ? trackingNumber(renamed) : null;
+  return renamed?.trackingNo ?? null;
 }
 
 async function loadProgram(where: SQL, includeDrafts: boolean) {
@@ -244,7 +252,6 @@ async function loadProgram(where: SQL, includeDrafts: boolean) {
   );
   return {
     ...withStatuses,
-    trackingNo: trackingNumber(program),
     closed,
     // `isEnabled` is the admin's toggle; `isActive` is whether visitors can use it.
     links: links.map((link) => ({
@@ -257,7 +264,7 @@ async function loadProgram(where: SQL, includeDrafts: boolean) {
 
 export type ProgramInput = Omit<
   typeof programs.$inferInsert,
-  "id" | "slug" | "createdAt" | "updatedAt"
+  "id" | "slug" | "trackingNo" | "createdAt" | "updatedAt"
 > & {
   links: { label: string; url: string; isEnabled: boolean }[];
   sections: { heading: string; body: string }[];
@@ -273,7 +280,11 @@ export async function saveProgram(id: number | null, input: ProgramInput) {
   if (programId == null) {
     const [created] = await db
       .insert(programs)
-      .values({ ...values, slug: await freeSlug(values.title) })
+      .values({
+        ...values,
+        slug: await freeSlug(values.title),
+        trackingNo: await freeTrackingNumber(),
+      })
       .returning({ id: programs.id });
     programId = created.id;
   } else {
@@ -362,6 +373,22 @@ async function freeSlug(title: string) {
   let slug = base;
   for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
   return slug;
+}
+
+/** A tracking number for a new program, in this year in Manila. */
+async function freeTrackingNumber() {
+  const year = todayInManila().slice(0, 4);
+  const taken = new Set(
+    (
+      await getDb()
+        .select({ trackingNo: programs.trackingNo })
+        .from(programs)
+        .where(like(programs.trackingNo, `HUSAY-${year}-%`))
+    ).map((r) => r.trackingNo),
+  );
+  const trackingNo = newTrackingNumber(year, taken);
+  if (!trackingNo) throw new Error(`No tracking numbers left for ${year}`);
+  return trackingNo;
 }
 
 /** Returns the program's short name, or undefined when it doesn't exist. */

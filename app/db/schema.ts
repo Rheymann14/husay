@@ -60,6 +60,9 @@ export const programs = sqliteTable(
     // the tracking number (lib/tracking.ts); the slug and program_old_slugs
     // now only redirect those older links.
     slug: text("slug").notNull().default(""),
+    // "HUSAY-<year>-<4 random digits>", given when the program is added
+    // (lib/tracking.ts). Public links are /programs/<tracking number>.
+    trackingNo: text("tracking_no").notNull().default(""),
     shortName: text("short_name").notNull(),
     title: text("title").notNull(),
     startDate: text("start_date"),
@@ -76,7 +79,10 @@ export const programs = sqliteTable(
       .default(true),
     ...timestamps,
   },
-  (t) => [uniqueIndex("programs_slug_idx").on(t.slug)],
+  (t) => [
+    uniqueIndex("programs_slug_idx").on(t.slug),
+    uniqueIndex("programs_tracking_no_idx").on(t.trackingNo),
+  ],
 );
 
 export const programLinks = sqliteTable(

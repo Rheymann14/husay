@@ -4,14 +4,16 @@
 -- and indented "  - " lines become sub-bullets.
 
 INSERT INTO `programs` (
-	`slug`, `short_name`, `title`, `start_date`, `end_date`, `duration_details`,
-	`duration_position`, `is_published`
+	`slug`, `tracking_no`, `short_name`, `title`, `start_date`, `end_date`,
+	`duration_details`, `duration_position`, `is_published`
 ) VALUES (
 	-- Slugs are unique, so seeding again numbers the new copy.
 	(SELECT CASE WHEN count(*) = 0
 		THEN 'higher-education-innovation-leaders-fellowship-program'
 		ELSE 'higher-education-innovation-leaders-fellowship-program-' || (SELECT max(`id`) + 1 FROM `programs`)
 	END FROM `programs` WHERE `slug` = 'higher-education-innovation-leaders-fellowship-program'),
+	-- A random tracking number, as the app gives (lib/tracking.ts).
+	'HUSAY-' || strftime('%Y', 'now') || '-' || (1000 + abs(random() % 9000)),
 	'HEIL Fellowship',
 	'Higher Education Innovation Leaders Fellowship Program',
 	'2026-10-01',

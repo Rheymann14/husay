@@ -7,9 +7,13 @@ import { RichText } from "~/components/rich-text";
 import { StatusBadge } from "~/components/status-badge";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
-import { getProgram, trackingNumberForSlug } from "~/lib/programs.server";
+import {
+  getProgram,
+  getProgramByTrackingNo,
+  trackingNumberForSlug,
+} from "~/lib/programs.server";
 import { toPlainText } from "~/lib/rich-text";
-import { idFromTrackingNumber } from "~/lib/tracking";
+import { idFromOldTrackingNumber, TRACKING_NO } from "~/lib/tracking";
 import type { Route } from "./+types/program-detail";
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -31,20 +35,26 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const moveTo = (to: string) =>
     redirect(`/programs/${to}${new URL(request.url).search}`, 301);
 
-  // Links used to be /programs/<id>, then /programs/<slug of the title>.
+  if (TRACKING_NO.test(trackingNo)) {
+    const program = await getProgramByTrackingNo(trackingNo);
+    if (program) {
+      // The number in lower case.
+      if (trackingNo !== program.trackingNo) throw moveTo(program.trackingNo);
+      return { program };
+    }
+  }
+
+  // Links used to be /programs/<id>, then /programs/<slug of the title>, then
+  // /programs/<tracking number made from the id>.
   const id = /^\d+$/.test(trackingNo)
     ? Number(trackingNo)
-    : idFromTrackingNumber(trackingNo);
-  if (id == null) {
-    const to = await trackingNumberForSlug(trackingNo);
-    if (to) throw moveTo(to);
-    throw data("Program not found", { status: 404 });
-  }
-  const program = await getProgram(id);
-  if (!program) throw data("Program not found", { status: 404 });
-  // An id link, or the number in lower case or with the wrong year.
-  if (trackingNo !== program.trackingNo) throw moveTo(program.trackingNo);
-  return { program };
+    : idFromOldTrackingNumber(trackingNo);
+  const to =
+    id == null
+      ? await trackingNumberForSlug(trackingNo)
+      : (await getProgram(id))?.trackingNo;
+  if (to) throw moveTo(to);
+  throw data("Program not found", { status: 404 });
 }
 
 /** One row of the two-column briefer table: label on the left, content on the right. */
