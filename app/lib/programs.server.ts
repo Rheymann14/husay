@@ -82,6 +82,7 @@ export const PROGRAM_SORT_KEYS = [
   "title",
   "duration",
   "status",
+  "visibility",
 ] as const;
 export type ProgramSortKey = (typeof PROGRAM_SORT_KEYS)[number];
 export type ProgramSort = { key: ProgramSortKey; dir: "asc" | "desc" };
@@ -169,6 +170,8 @@ export async function searchPrograms(
         byDateValue(a.startDate, b.startDate, dir) ||
         byDateValue(a.endDate, b.endDate, dir),
       status: (a, b) => dir * (statusRank(a.status) - statusRank(b.status)),
+      // Published first, then drafts.
+      visibility: (a, b) => dir * (Number(b.isPublished) - Number(a.isPublished)),
     };
     // Ties keep the date order.
     numbered.sort((a, b) => compare[sort.key](a, b) || a.no - b.no);

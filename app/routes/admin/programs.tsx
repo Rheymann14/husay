@@ -5,7 +5,7 @@ import { data, Link, useFetcher } from "react-router";
 import { Combobox } from "~/components/combobox";
 import { ConfirmDialog } from "~/components/dialog";
 import { ClearSearchLink, EmptyState } from "~/components/empty-state";
-import { Pagination, SearchBox } from "~/components/list-controls";
+import { Pagination, SearchBox, SortHeader } from "~/components/list-controls";
 import { statusOptions } from "~/components/status-badge";
 import { useStatusSettings } from "~/components/status-settings";
 import { useResultToast, type ActionResult } from "~/components/toaster";
@@ -16,6 +16,7 @@ import { formatDuration } from "~/lib/format";
 import { getListParams } from "~/lib/list-params.server";
 import {
   deleteProgram,
+  getProgramSort,
   listStatuses,
   searchPrograms,
   setProgramStatus,
@@ -30,7 +31,12 @@ export function meta({}: Route.MetaArgs) {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const params = getListParams(request);
-  return { ...(await searchPrograms(params)), query: params.query };
+  const sort = getProgramSort(request);
+  return {
+    ...(await searchPrograms(params, { sort })),
+    query: params.query,
+    sort,
+  };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -81,10 +87,12 @@ function StatusSelect({
   program,
   statuses,
   footer,
+  className,
 }: {
   program: ProgramListItem;
   statuses: StatusDef[];
   footer: ReturnType<typeof useStatusSettings>["footer"];
+  className?: string;
 }) {
   const fetcher = useFetcher<ActionResult>();
   useResultToast(fetcher.data);
@@ -94,7 +102,7 @@ function StatusSelect({
   return (
     <Combobox
       size="sm"
-      className="w-48"
+      className={className}
       options={statusOptions(statuses, program.autoStatus)}
       value={current}
       footer={footer}
@@ -143,8 +151,32 @@ function DeleteButton({ program }: { program: ProgramListItem }) {
   );
 }
 
+function Visibility({ published }: { published: boolean }) {
+  return published ? (
+    <span className="text-xs font-medium text-green-700">Published</span>
+  ) : (
+    <span className="text-xs font-medium text-amber-700">Draft (hidden)</span>
+  );
+}
+
+function RowActions({ program }: { program: ProgramListItem }) {
+  return (
+    <div className="flex justify-end gap-1">
+      <Link
+        to={`/admin/programs/${program.id}/edit`}
+        className="rounded-md p-1.5 text-slate-500 hover:bg-navy-50 hover:text-navy-800"
+        aria-label={`Edit ${program.shortName}`}
+        data-tooltip="Edit"
+      >
+        <Pencil className="size-4" aria-hidden />
+      </Link>
+      <DeleteButton program={program} />
+    </div>
+  );
+}
+
 export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
-  const { programs, statuses, total, page, pageCount, pageSize, query } =
+  const { programs, statuses, total, page, pageCount, pageSize, query, sort } =
     loaderData;
   const statusSettings = useStatusSettings(statuses);
 
@@ -189,68 +221,103 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
             />
           )
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+          <>
+            {/* Table for laptops and up. Fixed column widths keep it inside
+                the page without a horizontal scrollbar. */}
+            <table className="hidden w-full table-fixed text-left text-sm lg:table">
               <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
                 <tr>
-                  <th className="w-12 px-3 py-2">No.</th>
-                  <th className="px-3 py-2">Program</th>
-                  <th className="px-3 py-2">Program Title</th>
-                  <th className="px-3 py-2">Duration of Program</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Visibility</th>
-                  <th className="w-24 px-3 py-2 text-right">Actions</th>
+                  <SortHeader sortKey="no" sort={sort} className="w-12">
+                    No.
+                  </SortHeader>
+                  <SortHeader
+                    sortKey="provider"
+                    sort={sort}
+                    className="w-[18%]"
+                  >
+                    Provider
+                  </SortHeader>
+                  <SortHeader sortKey="title" sort={sort}>
+                    Program Title
+                  </SortHeader>
+                  <SortHeader sortKey="duration" sort={sort} className="w-28">
+                    Duration of Program
+                  </SortHeader>
+                  <SortHeader
+                    sortKey="status"
+                    sort={sort}
+                    className="w-40 xl:w-48"
+                  >
+                    Status
+                  </SortHeader>
+                  <SortHeader
+                    sortKey="visibility"
+                    sort={sort}
+                    className="w-24"
+                  >
+                    Visibility
+                  </SortHeader>
+                  <th className="w-20 px-2 py-1.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {programs.map((p, i) => (
+                {programs.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 text-slate-500">
-                      {(page - 1) * pageSize + i + 1}
-                    </td>
-                    <td className="px-3 py-2 font-semibold text-navy-900">
+                    <td className="px-2 py-2 text-slate-500">{p.no}</td>
+                    <td className="px-2 py-2 font-semibold break-words text-navy-900">
                       {p.shortName}
                     </td>
-                    <td className="px-3 py-2">{p.title}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-slate-600">
+                    <td className="px-2 py-2 break-words">{p.title}</td>
+                    <td className="px-2 py-2 text-xs text-slate-600">
                       {formatDuration(p.startDate, p.endDate)}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-2">
                       <StatusSelect
                         program={p}
                         statuses={statuses}
                         footer={statusSettings.footer}
+                        className="w-full"
                       />
                     </td>
-                    <td className="px-3 py-2">
-                      {p.isPublished ? (
-                        <span className="text-xs font-medium text-green-700">
-                          Published
-                        </span>
-                      ) : (
-                        <span className="text-xs font-medium text-amber-700">
-                          Draft (hidden)
-                        </span>
-                      )}
+                    <td className="px-2 py-2">
+                      <Visibility published={p.isPublished} />
                     </td>
-                    <td className="px-3 py-2">
-                      <div className="flex justify-end gap-1">
-                        <Link
-                          to={`/admin/programs/${p.id}/edit`}
-                          className="rounded-md p-1.5 text-slate-500 hover:bg-navy-50 hover:text-navy-800"
-                          aria-label={`Edit ${p.shortName}`}
-                          data-tooltip="Edit"
-                        >
-                          <Pencil className="size-4" aria-hidden />
-                        </Link>
-                        <DeleteButton program={p} />
-                      </div>
+                    <td className="px-2 py-2">
+                      <RowActions program={p} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+
+            {/* Cards for phones and tablets */}
+            <ul className="divide-y divide-slate-100 lg:hidden">
+              {programs.map((p) => (
+                <li key={p.id} className="flex items-start gap-2.5 px-3 py-2.5">
+                  <span className="mt-0.5 w-6 shrink-0 text-sm text-slate-400">
+                    {p.no}.
+                  </span>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="font-semibold break-words text-navy-900">
+                      {p.shortName}
+                    </p>
+                    <p className="text-sm break-words">{p.title}</p>
+                    <p className="text-xs text-slate-500">
+                      {formatDuration(p.startDate, p.endDate)} ·{" "}
+                      <Visibility published={p.isPublished} />
+                    </p>
+                    <StatusSelect
+                      program={p}
+                      statuses={statuses}
+                      footer={statusSettings.footer}
+                      className="w-full max-w-64"
+                    />
+                  </div>
+                  <RowActions program={p} />
+                </li>
+              ))}
+            </ul>
+          </>
         )}
         <Pagination
           page={page}

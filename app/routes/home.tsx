@@ -1,10 +1,7 @@
 import {
-  ArrowDown,
-  ArrowUp,
   BookOpen,
   CalendarClock,
   ChevronRight,
-  ChevronsUpDown,
   Eye,
   SearchX,
 } from "lucide-react";
@@ -16,23 +13,17 @@ import {
   useLocation,
   useNavigate,
   useParams,
-  useSearchParams,
 } from "react-router";
 
 import { ClearSearchLink, EmptyState } from "~/components/empty-state";
-import { Pagination, SearchBox } from "~/components/list-controls";
+import { Pagination, SearchBox, SortHeader } from "~/components/list-controls";
 import { SiteHeader } from "~/components/site-header";
 import { StatusBadge } from "~/components/status-badge";
 import { getUser } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { getListParams } from "~/lib/list-params.server";
-import {
-  getProgramSort,
-  searchPrograms,
-  type ProgramSort,
-  type ProgramSortKey,
-} from "~/lib/programs.server";
+import { getProgramSort, searchPrograms } from "~/lib/programs.server";
 import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
@@ -303,65 +294,5 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         {SITE.agency} · HUSAY Programs
       </footer>
     </div>
-  );
-}
-
-/**
- * A column heading that sorts the list. Clicking it again flips the order;
- * the page goes back to 1 and the search and open briefer are kept.
- */
-function SortHeader({
-  sortKey,
-  sort,
-  className = "",
-  children,
-}: {
-  sortKey: ProgramSortKey;
-  sort: ProgramSort;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const [searchParams] = useSearchParams();
-  const { pathname } = useLocation();
-  const active = sort.key === sortKey;
-  const dir = active && sort.dir === "asc" ? "desc" : "asc";
-
-  const next = new URLSearchParams(searchParams);
-  next.delete("page");
-  next.delete("sort");
-  next.delete("dir");
-  // No. ascending is the default order, so it needs no parameters.
-  if (sortKey !== "no" || dir === "desc") next.set("sort", sortKey);
-  if (dir === "desc") next.set("dir", "desc");
-  const qs = next.toString();
-
-  const Icon = !active
-    ? ChevronsUpDown
-    : sort.dir === "asc"
-      ? ArrowUp
-      : ArrowDown;
-  return (
-    <th
-      aria-sort={
-        active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
-      }
-      className={`px-2 py-1.5 ${className}`}
-    >
-      <Link
-        to={qs ? `${pathname}?${qs}` : pathname}
-        preventScrollReset
-        className={`group inline-flex items-center gap-1 text-left uppercase hover:text-navy-700 ${
-          active ? "text-navy-700" : ""
-        }`}
-      >
-        {children}
-        <Icon
-          className={`size-3 shrink-0 ${
-            active ? "" : "text-slate-300 group-hover:text-slate-400"
-          }`}
-          aria-hidden
-        />
-      </Link>
-    </th>
   );
 }

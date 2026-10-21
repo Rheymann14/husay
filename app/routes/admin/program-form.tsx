@@ -59,7 +59,7 @@ const richText = z.string().max(50_000, "This text is too long");
 
 const programSchema = z
   .object({
-    shortName: z.string().trim().min(1, "Enter the program").max(80),
+    shortName: z.string().trim().min(1, "Enter the provider").max(80),
     title: z.string().trim().min(1, "Enter the program title").max(300),
     startDate: optionalDate,
     endDate: optionalDate,
@@ -387,11 +387,11 @@ export default function ProgramForm({
             <h2 className="font-semibold text-slate-900">Program</h2>
             <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
               <label className="block">
-                <span className="label">Program *</span>
+                <span className="label">Provider *</span>
                 <input
                   name="shortName"
                   defaultValue={v?.shortName ?? program?.shortName}
-                  placeholder="e.g. HEIL Fellowship"
+                  placeholder="e.g. Bulacan State University"
                   className="input mt-1"
                 />
                 <FieldError message={errors.shortName} />

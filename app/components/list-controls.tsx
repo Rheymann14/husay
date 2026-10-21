@@ -1,4 +1,12 @@
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  Search,
+  X,
+} from "lucide-react";
 import { useEffect, useRef } from "react";
 import {
   Form,
@@ -196,5 +204,68 @@ export function Pagination({
         </div>
       )}
     </nav>
+  );
+}
+
+/**
+ * A column heading that sorts the list through ?sort= and ?dir=. Clicking it
+ * again flips the order; the page goes back to 1 and the search and any open
+ * child route are kept.
+ */
+export function SortHeader({
+  sortKey,
+  sort,
+  defaultKey = "no",
+  className = "",
+  children,
+}: {
+  sortKey: string;
+  sort: { key: string; dir: "asc" | "desc" };
+  /** The key whose ascending order is the default, so it needs no parameters. */
+  defaultKey?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
+  const active = sort.key === sortKey;
+  const dir = active && sort.dir === "asc" ? "desc" : "asc";
+
+  const next = new URLSearchParams(searchParams);
+  next.delete("page");
+  next.delete("sort");
+  next.delete("dir");
+  if (sortKey !== defaultKey || dir === "desc") next.set("sort", sortKey);
+  if (dir === "desc") next.set("dir", "desc");
+  const qs = next.toString();
+
+  const Icon = !active
+    ? ChevronsUpDown
+    : sort.dir === "asc"
+      ? ArrowUp
+      : ArrowDown;
+  return (
+    <th
+      aria-sort={
+        active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
+      }
+      className={`px-2 py-1.5 ${className}`}
+    >
+      <Link
+        to={qs ? `${pathname}?${qs}` : pathname}
+        preventScrollReset
+        className={`group inline-flex items-center gap-1 text-left uppercase hover:text-navy-700 ${
+          active ? "text-navy-700" : ""
+        }`}
+      >
+        {children}
+        <Icon
+          className={`size-3 shrink-0 ${
+            active ? "" : "text-slate-300 group-hover:text-slate-400"
+          }`}
+          aria-hidden
+        />
+      </Link>
+    </th>
   );
 }
