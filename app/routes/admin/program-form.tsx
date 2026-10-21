@@ -1,5 +1,5 @@
 import { ArrowLeft, Link2, Lock, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { data, Form, Link, useNavigation } from "react-router";
 import { z } from "zod";
 
@@ -281,7 +281,12 @@ export default function ProgramForm({
   );
   const [nextKey, setNextKey] = useState(links.length);
 
+  // Id of a just-added input to scroll to and focus once it renders, since
+  // rows can be added from the sticky panel while the list is off screen.
+  const focusAfterAdd = useRef<string | null>(null);
+
   const addLink = () => {
+    focusAfterAdd.current = `link-label-${nextKey}`;
     setLinks((rows) => [
       ...rows,
       {
@@ -320,6 +325,7 @@ export default function ProgramForm({
   const [nextRowKey, setNextRowKey] = useState(rows.length + 1);
 
   const addRow = () => {
+    focusAfterAdd.current = `row-heading-${nextRowKey}`;
     setRows((r) => [
       ...r,
       { key: nextRowKey, kind: "row", heading: "", body: "", isNew: true },
@@ -335,6 +341,15 @@ export default function ProgramForm({
 
   const durationPosition = rows.findIndex((r) => r.kind === "duration");
 
+  useEffect(() => {
+    const id = focusAfterAdd.current;
+    if (!id) return;
+    focusAfterAdd.current = null;
+    const el = document.getElementById(id);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.focus({ preventScroll: true });
+  }, [rows, links]);
+
   const [statusSetting, setStatusSetting] = useState(
     v?.status ?? program?.statusSetting ?? "auto",
   );
@@ -349,7 +364,7 @@ export default function ProgramForm({
   let rowIndex = -1;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-3">
+    <div className="mx-auto max-w-3xl space-y-3 lg:max-w-[65rem]">
       <Link
         to="/admin"
         className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
@@ -361,330 +376,365 @@ export default function ProgramForm({
         {program ? `Edit: ${program.shortName}` : "Add program"}
       </h1>
 
-      <Form method="post" className="space-y-3" noValidate>
+      <Form
+        method="post"
+        className="lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-4"
+        noValidate
+      >
         <input type="hidden" name="durationPosition" value={durationPosition} />
-
-        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold text-slate-900">Program</h2>
-          <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
-            <label className="block">
-              <span className="label">Program *</span>
-              <input
-                name="shortName"
-                defaultValue={v?.shortName ?? program?.shortName}
-                placeholder="e.g. HEIL Fellowship"
-                className="input mt-1"
-              />
-              <FieldError message={errors.shortName} />
-            </label>
-            <label className="block">
-              <span className="label">Program Title *</span>
-              <input
-                name="title"
-                defaultValue={v?.title ?? program?.title}
-                placeholder="e.g. Higher Education Innovation Leaders Fellowship Program"
-                className="input mt-1"
-              />
-              <FieldError message={errors.title} />
-            </label>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
-            <fieldset>
-              <legend className="label">Duration of Program</legend>
-              <div className="mt-1 grid grid-cols-2 gap-2">
-                <label className="block">
-                  <span className="sr-only">Start date</span>
-                  <input
-                    type="date"
-                    name="startDate"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    aria-label="Start date"
-                    className="input"
-                  />
-                  <FieldError message={errors.startDate} />
-                </label>
-                <label className="block">
-                  <span className="sr-only">End date</span>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    aria-label="End date"
-                    className="input"
-                  />
-                  <FieldError message={errors.endDate} />
-                </label>
-              </div>
-              <p className="hint">
-                Start and end. The list shows “{formatDuration(startDate || null, endDate || null)}”.
-              </p>
-            </fieldset>
-            <label className="block">
-              <span className="label">Status</span>
-              <span className="mt-1 block">
-                <Combobox
-                  name="status"
-                  value={statusSetting}
-                  onChange={setStatusSetting}
-                  options={statusOptions(statuses, autoStatus)}
-                  footer={statusSettings.footer}
-                  searchPlaceholder="Search statuses…"
+        <div className="space-y-3 lg:pb-8">
+          <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+            <h2 className="font-semibold text-slate-900">Program</h2>
+            <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
+              <label className="block">
+                <span className="label">Program *</span>
+                <input
+                  name="shortName"
+                  defaultValue={v?.shortName ?? program?.shortName}
+                  placeholder="e.g. HEIL Fellowship"
+                  className="input mt-1"
                 />
-              </span>
-              <p className="hint">
-                Automatic follows the dates: Upcoming before the start, Ongoing
-                until the end, then Closed.
-              </p>
-              <FieldError message={errors.status} />
-            </label>
-          </div>
-        </section>
-
-        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-slate-900">Program briefer</h2>
-              <p className="text-xs text-slate-500">
-                Rows of the briefer table, shown after “Name of Program”. Add,
-                rename, reorder or remove rows as needed.
-              </p>
+                <FieldError message={errors.shortName} />
+              </label>
+              <label className="block">
+                <span className="label">Program Title *</span>
+                <input
+                  name="title"
+                  defaultValue={v?.title ?? program?.title}
+                  placeholder="e.g. Higher Education Innovation Leaders Fellowship Program"
+                  className="input mt-1"
+                />
+                <FieldError message={errors.title} />
+              </label>
             </div>
-            <button type="button" onClick={addRow} className="btn-secondary shrink-0">
-              <Plus className="size-4" aria-hidden />
-              Add row
-            </button>
-          </div>
-          <SortableList items={rows} getId={rowId} onReorder={setRows}>
-            <ol className="space-y-3">
-              {rows.map((row, i) => {
-                if (row.kind === "duration") {
+            <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+              <fieldset>
+                <legend className="label">Duration of Program</legend>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  <label className="block">
+                    <span className="sr-only">Start date</span>
+                    <input
+                      type="date"
+                      name="startDate"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      aria-label="Start date"
+                      className="input"
+                    />
+                    <FieldError message={errors.startDate} />
+                  </label>
+                  <label className="block">
+                    <span className="sr-only">End date</span>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      aria-label="End date"
+                      className="input"
+                    />
+                    <FieldError message={errors.endDate} />
+                  </label>
+                </div>
+                <p className="hint">
+                  Start and end. The list shows “{formatDuration(startDate || null, endDate || null)}”.
+                </p>
+              </fieldset>
+              <label className="block">
+                <span className="label">Status</span>
+                <span className="mt-1 block">
+                  <Combobox
+                    name="status"
+                    value={statusSetting}
+                    onChange={setStatusSetting}
+                    options={statusOptions(statuses, autoStatus)}
+                    footer={statusSettings.footer}
+                    searchPlaceholder="Search statuses…"
+                  />
+                </span>
+                <p className="hint">
+                  Automatic follows the dates: Upcoming before the start, Ongoing
+                  until the end, then Closed.
+                </p>
+                <FieldError message={errors.status} />
+              </label>
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-slate-900">Program briefer</h2>
+                <p className="text-xs text-slate-500">
+                  Rows of the briefer table, shown after “Name of Program”. Add,
+                  rename, reorder or remove rows as needed.
+                </p>
+              </div>
+              <button type="button" onClick={addRow} className="btn-secondary shrink-0">
+                <Plus className="size-4" aria-hidden />
+                Add row
+              </button>
+            </div>
+            <SortableList items={rows} getId={rowId} onReorder={setRows}>
+              <ol className="space-y-3">
+                {rows.map((row, i) => {
+                  if (row.kind === "duration") {
+                    return (
+                      <SortableItem
+                        key="duration"
+                        id={rowId(row)}
+                        handleLabel="Drag to reorder Duration row"
+                        className="space-y-2 rounded-md border border-navy-100 bg-navy-50/50 p-3"
+                      >
+                        {(handle) => (
+                          <>
+                            <div className="flex items-center gap-1">
+                              {handle}
+                              <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-slate-900">
+                                Duration
+                                <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
+                                  <Lock className="size-3" aria-hidden />
+                                  Built-in
+                                </span>
+                              </p>
+                            </div>
+                            <p className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
+                              {formatDuration(startDate || null, endDate || null, { long: true })}
+                            </p>
+                            <p className="hint -mt-1">
+                              First line comes from Duration of Program. Add the
+                              schedule details below.
+                            </p>
+                            <RichTextEditor
+                              name="durationDetails"
+                              label="Duration details"
+                              defaultValue={v?.durationDetails ?? program?.durationDetails}
+                              placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
+                            />
+                            <FieldError message={errors.durationDetails} />
+                          </>
+                        )}
+                      </SortableItem>
+                    );
+                  }
+
+                  rowIndex += 1;
+                  const errorIndex = rowIndex;
                   return (
                     <SortableItem
-                      key="duration"
+                      key={row.key}
                       id={rowId(row)}
-                      handleLabel="Drag to reorder Duration row"
-                      className="space-y-2 rounded-md border border-navy-100 bg-navy-50/50 p-3"
+                      handleLabel={`Drag to reorder row ${i + 1}`}
+                      className={`space-y-2 rounded-md border p-3 ${
+                        row.isNew ? newRowHighlight : "border-slate-200 bg-slate-50/60"
+                      }`}
                     >
                       {(handle) => (
                         <>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-start gap-1">
                             {handle}
-                            <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-slate-900">
-                              Duration
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
-                                <Lock className="size-3" aria-hidden />
-                                Built-in
-                              </span>
-                            </p>
+                            <div className="min-w-0 flex-1">
+                              <input
+                                id={`row-heading-${row.key}`}
+                                name="sectionHeading"
+                                value={row.heading}
+                                onChange={(e) => updateHeading(row.key, e.target.value)}
+                                placeholder="Row label, e.g. Program Provider"
+                                aria-label={`Row ${i + 1} label`}
+                                className="input font-medium"
+                              />
+                              <FieldError message={errors[`sections.${errorIndex}.heading`]} />
+                            </div>
+                            <div className="flex shrink-0 items-center">
+                              {row.isNew && <NewTag />}
+                              <button
+                                type="button"
+                                onClick={() => removeRow(row.key)}
+                                className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
+                                aria-label={`Remove row ${i + 1}`}
+                                data-tooltip="Remove row"
+                              >
+                                <Trash2 className="size-4" aria-hidden />
+                              </button>
+                            </div>
                           </div>
-                          <p className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
-                            {formatDuration(startDate || null, endDate || null, { long: true })}
-                          </p>
-                          <p className="hint -mt-1">
-                            First line comes from Duration of Program. Add the
-                            schedule details below.
-                          </p>
                           <RichTextEditor
-                            name="durationDetails"
-                            label="Duration details"
-                            defaultValue={v?.durationDetails ?? program?.durationDetails}
-                            placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
+                            name="sectionBody"
+                            label={row.heading || `Row ${i + 1} content`}
+                            defaultValue={row.body}
                           />
-                          <FieldError message={errors.durationDetails} />
+                          <FieldError message={errors[`sections.${errorIndex}.body`]} />
                         </>
                       )}
                     </SortableItem>
                   );
-                }
+                })}
+              </ol>
+            </SortableList>
+            <button
+              type="button"
+              onClick={addRow}
+              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-300 p-2.5 text-sm font-medium text-slate-600 hover:border-navy-600 hover:bg-navy-50 hover:text-navy-800"
+            >
+              <Plus className="size-4" aria-hidden />
+              Add row
+            </button>
+          </section>
 
-                rowIndex += 1;
-                const errorIndex = rowIndex;
-                return (
-                  <SortableItem
-                    key={row.key}
-                    id={rowId(row)}
-                    handleLabel={`Drag to reorder row ${i + 1}`}
-                    className={`space-y-2 rounded-md border p-3 ${
-                      row.isNew ? newRowHighlight : "border-slate-200 bg-slate-50/60"
-                    }`}
-                  >
-                    {(handle) => (
-                      <>
-                        <div className="flex items-start gap-1">
-                          {handle}
-                          <div className="min-w-0 flex-1">
-                            <input
-                              name="sectionHeading"
-                              value={row.heading}
-                              onChange={(e) => updateHeading(row.key, e.target.value)}
-                              placeholder="Row label, e.g. Program Provider"
-                              aria-label={`Row ${i + 1} label`}
-                              className="input font-medium"
-                            />
-                            <FieldError message={errors[`sections.${errorIndex}.heading`]} />
-                          </div>
-                          <div className="flex shrink-0 items-center">
-                            {row.isNew && <NewTag />}
-                            <button
-                              type="button"
-                              onClick={() => removeRow(row.key)}
-                              className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
-                              aria-label={`Remove row ${i + 1}`}
-                              data-tooltip="Remove row"
-                            >
-                              <Trash2 className="size-4" aria-hidden />
-                            </button>
-                          </div>
-                        </div>
-                        <RichTextEditor
-                          name="sectionBody"
-                          label={row.heading || `Row ${i + 1} content`}
-                          defaultValue={row.body}
-                        />
-                        <FieldError message={errors[`sections.${errorIndex}.body`]} />
-                      </>
-                    )}
-                  </SortableItem>
-                );
-              })}
-            </ol>
-          </SortableList>
-          <button
-            type="button"
-            onClick={addRow}
-            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-300 p-2.5 text-sm font-medium text-slate-600 hover:border-navy-600 hover:bg-navy-50 hover:text-navy-800"
-          >
-            <Plus className="size-4" aria-hidden />
-            Add row
-          </button>
-        </section>
-
-        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-slate-900">Application links</h2>
-              <p className="text-xs text-slate-500">
-                Shown as buttons at the bottom of the briefer, e.g. “Apply Here”.
-                Switch a link off to show its button as disabled.
-              </p>
+          <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-slate-900">Application links</h2>
+                <p className="text-xs text-slate-500">
+                  Shown as buttons at the bottom of the briefer, e.g. “Apply Here”.
+                  Switch a link off to show its button as disabled.
+                </p>
+              </div>
+              <button type="button" onClick={addLink} className="btn-secondary">
+                <Plus className="size-4" aria-hidden />
+                Add link
+              </button>
             </div>
-            <button type="button" onClick={addLink} className="btn-secondary">
+            {linksClosed && links.length > 0 && (
+              <p className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                <Lock className="mt-px size-3.5 shrink-0" aria-hidden />
+                This program is closed, so all its links are disabled on the
+                landing page. Move the end date or change the status to turn them
+                back on.
+              </p>
+            )}
+            {links.length === 0 ? (
+              <EmptyState
+                size="sm"
+                icon={Link2}
+                title="No application link yet"
+                description="Add one so people know where to apply."
+                className="rounded-lg border border-dashed border-slate-300"
+              />
+            ) : (
+              <SortableList items={links} getId={linkId} onReorder={setLinks}>
+                <ul className="space-y-2">
+                  {links.map((link, i) => (
+                    <SortableItem
+                      key={link.key}
+                      id={linkId(link)}
+                      handleLabel={`Drag to reorder link ${i + 1}`}
+                      className={`grid grid-cols-[auto_1fr_auto_auto] items-start gap-2 rounded-md border p-1.5 sm:grid-cols-[auto_12rem_1fr_auto_auto] ${
+                        link.isNew ? newRowHighlight : "border-transparent bg-white"
+                      }`}
+                    >
+                      {(handle) => (
+                        <>
+                          {handle}
+                          <div>
+                            <input
+                              id={`link-label-${link.key}`}
+                              name="linkLabel"
+                              value={link.label}
+                              onChange={(e) => updateLink(link.key, "label", e.target.value)}
+                              placeholder="Apply Here"
+                              aria-label={`Link ${i + 1} label`}
+                              className="input"
+                            />
+                            <FieldError message={errors[`links.${i}.label`]} />
+                          </div>
+                          <div className="col-start-2 sm:col-start-auto">
+                            <input
+                              name="linkUrl"
+                              type="url"
+                              value={link.url}
+                              onChange={(e) => updateLink(link.key, "url", e.target.value)}
+                              placeholder="https://forms.gle/…"
+                              aria-label={`Link ${i + 1} URL`}
+                              className="input"
+                            />
+                            <FieldError message={errors[`links.${i}.url`]} />
+                          </div>
+                          <input
+                            type="hidden"
+                            name="linkEnabled"
+                            value={link.isEnabled ? "on" : "off"}
+                          />
+                          <LinkSwitch
+                            checked={link.isEnabled && !linksClosed}
+                            disabled={linksClosed}
+                            onToggle={() => toggleLink(link.key)}
+                            label={`Link ${i + 1} enabled`}
+                            className="col-start-3 row-start-1 sm:col-start-4"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeLink(link.key)}
+                            className="col-start-4 row-start-1 rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700 sm:col-start-5"
+                            aria-label={`Remove link ${i + 1}`}
+                            data-tooltip="Remove link"
+                          >
+                            <Trash2 className="size-4" aria-hidden />
+                          </button>
+                        </>
+                      )}
+                    </SortableItem>
+                  ))}
+                </ul>
+              </SortableList>
+            )}
+          </section>
+
+          <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+            <h2 className="font-semibold text-slate-900">Visibility</h2>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isPublished"
+                defaultChecked={v?.isPublished ?? program?.isPublished ?? true}
+                className="size-4 rounded border-slate-300"
+              />
+              <span className="text-sm text-slate-700">
+                Published (visible on the public list)
+              </span>
+            </label>
+            <p className="hint">
+              Programs are listed by date: earliest start first.
+            </p>
+          </section>
+
+          {/* Large screens use the sticky panel instead. */}
+          <div className="flex justify-end gap-2 pb-8 lg:hidden">
+            <Link to="/admin" className="btn-secondary">
+              Cancel
+            </Link>
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? "Saving…" : program ? "Save changes" : "Add program"}
+            </button>
+          </div>
+        </div>
+
+        {/* Sticky actions, so long briefers don't need scrolling to save. */}
+        <aside className="hidden space-y-3 rounded-lg border border-slate-200 bg-white p-4 lg:sticky lg:top-4 lg:block">
+          <div className="space-y-2">
+            <h2 className="font-semibold text-slate-900">Quick actions</h2>
+            <button type="button" onClick={addRow} className="btn-secondary w-full">
+              <Plus className="size-4" aria-hidden />
+              Add briefer row
+            </button>
+            <button type="button" onClick={addLink} className="btn-secondary w-full">
               <Plus className="size-4" aria-hidden />
               Add link
             </button>
-          </div>
-          {linksClosed && links.length > 0 && (
-            <p className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-              <Lock className="mt-px size-3.5 shrink-0" aria-hidden />
-              This program is closed, so all its links are disabled on the
-              landing page. Move the end date or change the status to turn them
-              back on.
+            <p className="hint">
+              {rows.length} briefer {rows.length === 1 ? "row" : "rows"} ·{" "}
+              {links.length} {links.length === 1 ? "link" : "links"}
             </p>
-          )}
-          {links.length === 0 ? (
-            <EmptyState
-              size="sm"
-              icon={Link2}
-              title="No application link yet"
-              description="Add one so people know where to apply."
-              className="rounded-lg border border-dashed border-slate-300"
-            />
-          ) : (
-            <SortableList items={links} getId={linkId} onReorder={setLinks}>
-              <ul className="space-y-2">
-                {links.map((link, i) => (
-                  <SortableItem
-                    key={link.key}
-                    id={linkId(link)}
-                    handleLabel={`Drag to reorder link ${i + 1}`}
-                    className={`grid grid-cols-[auto_1fr_auto_auto] items-start gap-2 rounded-md border p-1.5 sm:grid-cols-[auto_12rem_1fr_auto_auto] ${
-                      link.isNew ? newRowHighlight : "border-transparent bg-white"
-                    }`}
-                  >
-                    {(handle) => (
-                      <>
-                        {handle}
-                        <div>
-                          <input
-                            name="linkLabel"
-                            value={link.label}
-                            onChange={(e) => updateLink(link.key, "label", e.target.value)}
-                            placeholder="Apply Here"
-                            aria-label={`Link ${i + 1} label`}
-                            className="input"
-                          />
-                          <FieldError message={errors[`links.${i}.label`]} />
-                        </div>
-                        <div className="col-start-2 sm:col-start-auto">
-                          <input
-                            name="linkUrl"
-                            type="url"
-                            value={link.url}
-                            onChange={(e) => updateLink(link.key, "url", e.target.value)}
-                            placeholder="https://forms.gle/…"
-                            aria-label={`Link ${i + 1} URL`}
-                            className="input"
-                          />
-                          <FieldError message={errors[`links.${i}.url`]} />
-                        </div>
-                        <input
-                          type="hidden"
-                          name="linkEnabled"
-                          value={link.isEnabled ? "on" : "off"}
-                        />
-                        <LinkSwitch
-                          checked={link.isEnabled && !linksClosed}
-                          disabled={linksClosed}
-                          onToggle={() => toggleLink(link.key)}
-                          label={`Link ${i + 1} enabled`}
-                          className="col-start-3 row-start-1 sm:col-start-4"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeLink(link.key)}
-                          className="col-start-4 row-start-1 rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700 sm:col-start-5"
-                          aria-label={`Remove link ${i + 1}`}
-                          data-tooltip="Remove link"
-                        >
-                          <Trash2 className="size-4" aria-hidden />
-                        </button>
-                      </>
-                    )}
-                  </SortableItem>
-                ))}
-              </ul>
-            </SortableList>
-          )}
-        </section>
-
-        <section className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold text-slate-900">Visibility</h2>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="isPublished"
-              defaultChecked={v?.isPublished ?? program?.isPublished ?? true}
-              className="size-4 rounded border-slate-300"
-            />
-            <span className="text-sm text-slate-700">
-              Published (visible on the public list)
-            </span>
-          </label>
-          <p className="hint">
-            Programs are listed by date: earliest start first.
-          </p>
-        </section>
-
-        <div className="flex justify-end gap-2 pb-8">
-          <Link to="/admin" className="btn-secondary">
-            Cancel
-          </Link>
-          <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? "Saving…" : program ? "Save changes" : "Add program"}
-          </button>
-        </div>
+          </div>
+          <div className="space-y-2 border-t border-slate-200 pt-3">
+            <button type="submit" disabled={saving} className="btn-primary w-full">
+              {saving ? "Saving…" : program ? "Save changes" : "Add program"}
+            </button>
+            <Link to="/admin" className="btn-secondary w-full">
+              Cancel
+            </Link>
+          </div>
+        </aside>
       </Form>
       {statusSettings.dialog}
     </div>
