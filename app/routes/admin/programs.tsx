@@ -1,9 +1,9 @@
-import { FolderPlus, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
+import { CalendarClock, FolderPlus, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { data, Link, useFetcher } from "react-router";
 
 import { Combobox } from "~/components/combobox";
-import { ConfirmDialog } from "~/components/dialog";
+import { ConfirmDialog, Dialog } from "~/components/dialog";
 import { ClearSearchLink, EmptyState } from "~/components/empty-state";
 import { Pagination, SearchBox, SortHeader } from "~/components/list-controls";
 import { statusOptions } from "~/components/status-badge";
@@ -15,10 +15,12 @@ import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { getListParams } from "~/lib/list-params.server";
 import {
+  countDurationShown,
   deleteProgram,
   getProgramSort,
   listStatuses,
   searchPrograms,
+  setDurationShownForAll,
   setProgramStatus,
   type ProgramListItem,
 } from "~/lib/programs.server";
@@ -32,17 +34,35 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   const params = getListParams(request);
   const sort = getProgramSort(request);
-  return {
-    ...(await searchPrograms(params, { sort })),
-    query: params.query,
-    sort,
-  };
+  const [list, duration] = await Promise.all([
+    searchPrograms(params, { sort }),
+    countDurationShown(),
+  ]);
+  return { ...list, duration, query: params.query, sort };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
   const user = context.get(userContext);
   const form = await request.formData();
   const intent = form.get("intent");
+
+  if (intent === "duration-all") {
+    const show = form.get("show") === "on";
+    const changed = await setDurationShownForAll(show);
+    if (changed > 0) {
+      await logActivity({
+        user,
+        action: "update",
+        entity: "program",
+        summary: `${show ? "Showed" : "Hid"} the Duration row on all programs (${changed} changed)`,
+      });
+    }
+    return {
+      ok: true,
+      message: `Duration row ${show ? "shown" : "hidden"} on all programs.`,
+    } satisfies ActionResult;
+  }
+
   const id = Number(form.get("id"));
   if (!Number.isInteger(id)) throw data("Invalid program", { status: 400 });
 
@@ -151,11 +171,84 @@ function DeleteButton({ program }: { program: ProgramListItem }) {
   );
 }
 
-function Visibility({ published }: { published: boolean }) {
-  return published ? (
-    <span className="text-xs font-medium text-green-700">Published</span>
-  ) : (
-    <span className="text-xs font-medium text-amber-700">Draft (hidden)</span>
+/** Shows or hides the briefer's Duration row on every program at once. */
+function DurationRowButton({ shown, hidden }: { shown: number; hidden: number }) {
+  const fetcher = useFetcher<ActionResult>();
+  useResultToast(fetcher.data);
+  const [open, setOpen] = useState(false);
+  const setAll = (show: boolean) => {
+    setOpen(false);
+    fetcher.submit(
+      { intent: "duration-all", show: show ? "on" : "off" },
+      { method: "post" },
+    );
+  };
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={fetcher.state !== "idle"}
+        className="btn-secondary"
+      >
+        <CalendarClock className="size-4" aria-hidden />
+        Duration row
+      </button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Duration row on all programs"
+        description="Show or hide the Duration row in every program's briefer and PDF."
+      >
+        <p className="text-sm text-slate-600">
+          Shown on {shown} {shown === 1 ? "program" : "programs"}, hidden on{" "}
+          {hidden}. The dates and details are kept, and each program can still
+          be switched on its Edit page.
+        </p>
+        <div className="flex flex-wrap justify-end gap-2 pt-1">
+          <button type="button" onClick={() => setOpen(false)} className="btn-secondary" data-autofocus>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => setAll(false)}
+            disabled={shown === 0}
+            className="btn-secondary"
+          >
+            Hide on all
+          </button>
+          <button
+            type="button"
+            onClick={() => setAll(true)}
+            disabled={hidden === 0}
+            className="btn-primary"
+          >
+            Show on all
+          </button>
+        </div>
+      </Dialog>
+    </>
+  );
+}
+
+function Visibility({
+  published,
+  showDuration,
+}: {
+  published: boolean;
+  showDuration: boolean;
+}) {
+  return (
+    <>
+      {published ? (
+        <span className="text-xs font-medium text-green-700">Published</span>
+      ) : (
+        <span className="text-xs font-medium text-amber-700">Draft (hidden)</span>
+      )}
+      {!showDuration && (
+        <span className="block text-[11px] text-slate-500">Duration hidden</span>
+      )}
+    </>
   );
 }
 
@@ -176,8 +269,17 @@ function RowActions({ program }: { program: ProgramListItem }) {
 }
 
 export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
-  const { programs, statuses, total, page, pageCount, pageSize, query, sort } =
-    loaderData;
+  const {
+    programs,
+    statuses,
+    duration,
+    total,
+    page,
+    pageCount,
+    pageSize,
+    query,
+    sort,
+  } = loaderData;
   const statusSettings = useStatusSettings(statuses);
 
   return (
@@ -191,6 +293,7 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <SearchBox placeholder="Search title or tracking no.…" />
+          <DurationRowButton shown={duration.shown} hidden={duration.hidden} />
           <Link to="/admin/programs/new" className="btn-primary">
             <Plus className="size-4" aria-hidden />
             Add program
@@ -280,7 +383,7 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <Visibility published={p.isPublished} />
+                      <Visibility published={p.isPublished} showDuration={p.showDuration} />
                     </td>
                     <td className="px-2 py-2">
                       <RowActions program={p} />
@@ -304,7 +407,7 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
                     <p className="text-sm break-words">{p.title}</p>
                     <p className="text-xs text-slate-500">
                       {formatDuration(p.startDate, p.endDate)} ·{" "}
-                      <Visibility published={p.isPublished} />
+                      <Visibility published={p.isPublished} showDuration={p.showDuration} />
                     </p>
                     <StatusSelect
                       program={p}

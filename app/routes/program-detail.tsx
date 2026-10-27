@@ -156,16 +156,18 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
               <RichText text={section.body} />
             </Row>
           ))}
-          <Row label="Duration">
-            <p>
-              {formatDuration(program.startDate, program.endDate, { long: true })}
-            </p>
-            {program.durationDetails && (
-              <div className="mt-2">
-                <RichText text={program.durationDetails} />
-              </div>
-            )}
-          </Row>
+          {program.showDuration && (
+            <Row label="Duration">
+              <p>
+                {formatDuration(program.startDate, program.endDate, { long: true })}
+              </p>
+              {program.durationDetails && (
+                <div className="mt-2">
+                  <RichText text={program.durationDetails} />
+                </div>
+              )}
+            </Row>
+          )}
           {sectionsAfter.map((section) => (
             <Row key={section.id} label={section.heading}>
               <RichText text={section.body} />

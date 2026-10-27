@@ -16,6 +16,7 @@ export type BrieferProgram = {
   endDate: string | null;
   durationDetails: string;
   durationPosition: number;
+  showDuration: boolean;
   sections: { id: number; heading: string; body: string }[];
   links: { id: number; label: string; url: string; isActive: boolean }[];
 };
@@ -60,7 +61,7 @@ export function brieferDocument(program: BrieferProgram, origin: string) {
   const rows = [
     row("Name of Program", `<strong>${escapeHtml(program.title)}</strong>`),
     ...before.map((s) => row(s.heading, richText(s.body))),
-    row("Duration", duration),
+    ...(program.showDuration ? [row("Duration", duration)] : []),
     ...after.map((s) => row(s.heading, richText(s.body))),
   ].join("");
 

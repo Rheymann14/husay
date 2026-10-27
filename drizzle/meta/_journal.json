@@ -92,6 +92,13 @@
       "when": 1792496914269,
       "tag": "0012_program_tracking_no",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1793094898910,
+      "tag": "0013_program_show_duration",
+      "breakpoints": true
     }
   ]
 }

@@ -71,6 +71,10 @@ export const programs = sqliteTable(
     // Where the built-in Duration row sits in the briefer: the number of
     // program_sections rows shown before it.
     durationPosition: integer("duration_position").notNull().default(0),
+    // Whether the built-in Duration row shows in the briefer and its PDF.
+    showDuration: integer("show_duration", { mode: "boolean" })
+      .notNull()
+      .default(true),
     // "auto" follows the start and end dates, "none" shows no status, anything
     // else is a program_statuses key set manually.
     status: text("status").notNull().default("auto"),

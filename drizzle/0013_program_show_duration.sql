@@ -1,0 +1,1 @@
+ALTER TABLE `programs` ADD `show_duration` integer DEFAULT true NOT NULL;

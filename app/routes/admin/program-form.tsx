@@ -65,6 +65,7 @@ const programSchema = z
     endDate: optionalDate,
     durationDetails: richText,
     durationPosition: z.number().int().min(0),
+    showDuration: z.boolean(),
     status: z.string(),
     isPublished: z.boolean(),
     links: z.array(
@@ -121,6 +122,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     endDate: text("endDate"),
     durationDetails: await sanitizeHtml(text("durationDetails")),
     durationPosition: rows.filter((r) => r.index < durationAt).length,
+    showDuration: form.get("showDuration") === "on",
     status: text("status"),
     isPublished: form.get("isPublished") === "on",
     links,
@@ -165,31 +167,27 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-red-700">{message}</p>;
 }
 
-/** On/off switch for an application link. */
-function LinkSwitch({
+/** On/off switch, e.g. for an application link or the Duration row. */
+function Switch({
   checked,
-  disabled,
+  disabled = false,
   onToggle,
   label,
+  tooltip,
   className = "",
 }: {
   checked: boolean;
-  disabled: boolean;
+  disabled?: boolean;
   onToggle: () => void;
   label: string;
+  tooltip: string;
   className?: string;
 }) {
   // The tooltip sits on a wrapper: disabled buttons get no pointer events.
   return (
     <span
       className={`flex h-[34px] items-center px-1 ${className}`}
-      data-tooltip={
-        disabled
-          ? "Disabled while the program is closed"
-          : checked
-            ? "Enabled on the landing page"
-            : "Disabled on the landing page"
-      }
+      data-tooltip={tooltip}
     >
       <button
         type="button"
@@ -340,6 +338,9 @@ export default function ProgramForm({
     setRows((r) => r.filter((row) => row.key !== key));
 
   const durationPosition = rows.findIndex((r) => r.kind === "duration");
+  const [showDuration, setShowDuration] = useState(
+    v?.showDuration ?? program?.showDuration ?? true,
+  );
 
   useEffect(() => {
     const id = focusAfterAdd.current;
@@ -382,6 +383,7 @@ export default function ProgramForm({
         noValidate
       >
         <input type="hidden" name="durationPosition" value={durationPosition} />
+        <input type="hidden" name="showDuration" value={showDuration ? "on" : "off"} />
         <div className="space-y-3 lg:pb-8">
           <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
             <h2 className="font-semibold text-slate-900">Program</h2>
@@ -496,22 +498,40 @@ export default function ProgramForm({
                                   <Lock className="size-3" aria-hidden />
                                   Built-in
                                 </span>
+                                {!showDuration && (
+                                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                                    Hidden
+                                  </span>
+                                )}
                               </p>
+                              <Switch
+                                checked={showDuration}
+                                onToggle={() => setShowDuration((s) => !s)}
+                                label="Show Duration row"
+                                tooltip={
+                                  showDuration
+                                    ? "Shown in the briefer and PDF"
+                                    : "Hidden from the briefer and PDF"
+                                }
+                              />
                             </div>
-                            <p className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
-                              {formatDuration(startDate || null, endDate || null, { long: true })}
-                            </p>
-                            <p className="hint -mt-1">
-                              First line comes from Duration of Program. Add the
-                              schedule details below.
-                            </p>
-                            <RichTextEditor
-                              name="durationDetails"
-                              label="Duration details"
-                              defaultValue={v?.durationDetails ?? program?.durationDetails}
-                              placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
-                            />
-                            <FieldError message={errors.durationDetails} />
+                            <div className={`space-y-2 ${showDuration ? "" : "opacity-60"}`}>
+                              <p className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
+                                {formatDuration(startDate || null, endDate || null, { long: true })}
+                              </p>
+                              <p className="hint -mt-1">
+                                {showDuration
+                                  ? "First line comes from Duration of Program. Add the schedule details below."
+                                  : "Hidden from the briefer and PDF. The dates and details are kept."}
+                              </p>
+                              <RichTextEditor
+                                name="durationDetails"
+                                label="Duration details"
+                                defaultValue={v?.durationDetails ?? program?.durationDetails}
+                                placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
+                              />
+                              <FieldError message={errors.durationDetails} />
+                            </div>
                           </>
                         )}
                       </SortableItem>
@@ -655,11 +675,18 @@ export default function ProgramForm({
                             name="linkEnabled"
                             value={link.isEnabled ? "on" : "off"}
                           />
-                          <LinkSwitch
+                          <Switch
                             checked={link.isEnabled && !linksClosed}
                             disabled={linksClosed}
                             onToggle={() => toggleLink(link.key)}
                             label={`Link ${i + 1} enabled`}
+                            tooltip={
+                              linksClosed
+                                ? "Disabled while the program is closed"
+                                : link.isEnabled
+                                  ? "Enabled on the landing page"
+                                  : "Disabled on the landing page"
+                            }
                             className="col-start-3 row-start-1 sm:col-start-4"
                           />
                           <button

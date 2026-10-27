@@ -69,7 +69,9 @@ Square images with a transparent or white background look best. They are shown i
 Each program has four fixed fields: Program, Program Title, Duration of Program
 and Status. Everything else in the briefer (Program Provider, Brief Description,
 Target Participants, and any other row) is a row the admin adds, renames,
-reorders or removes. The built-in Duration row can be moved but not removed.
+reorders or removes. The built-in Duration row can be moved but not removed;
+its switch hides it from the briefer and PDF. To show or hide it on every
+program at once, use **Duration row** on the Programs page.
 
 Row text uses a rich text editor (bold, italic, underline, bullets, sub-bullets
 with Tab, links). Drag its bottom-right corner to resize it, or use the expand
