@@ -250,9 +250,16 @@ export default function ProgramForm({
     v?.startDate ?? program?.startDate ?? "",
   );
   const [endDate, setEndDate] = useState(v?.endDate ?? program?.endDate ?? "");
-  const [showDuration, setShowDuration] = useState(
-    v?.showDuration ?? program?.showDuration ?? true,
-  );
+  // null until the admin flips the switch: it then follows the dates, hidden
+  // while they are blank ("To be announced"). A program saved hidden without
+  // dates hasn't been chosen either.
+  const [durationChoice, setDurationChoice] = useState<boolean | null>(() => {
+    if (v) return v.showDuration;
+    if (!program) return null;
+    if (!program.showDuration && !program.startDate && !program.endDate) return null;
+    return program.showDuration;
+  });
+  const showDuration = durationChoice ?? Boolean(startDate || endDate);
 
   const [links, setLinks] = useState(() =>
     (v?.links ?? program?.links ?? []).map((l, i) => ({
@@ -393,7 +400,7 @@ export default function ProgramForm({
                     />
                     <Switch
                       checked={showDuration}
-                      onToggle={() => setShowDuration((s) => !s)}
+                      onToggle={() => setDurationChoice(!showDuration)}
                       label="Show Duration of Program on the public list"
                       tooltip={
                         showDuration

@@ -72,7 +72,9 @@ Target Participants, and any other row) is a row the admin adds, renames,
 reorders or removes. To show a Duration row, add one like any other row.
 
 The Duration of Program switch on the Add/Edit page hides it from the public
-list, which then shows a blank; the dates still set the automatic status. To
+list, which then shows a blank; the dates still set the automatic status. It is
+off while a program has no dates ("To be announced") and turns on once a date
+is entered, unless you flip it yourself. To
 show or hide it on every program at once, use **Duration** on the Programs page.
 
 Row text uses a rich text editor (bold, italic, underline, bullets, sub-bullets
