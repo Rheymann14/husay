@@ -376,27 +376,33 @@ export default function ProgramForm({
               </label>
             </div>
             <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
-              <fieldset className="relative">
-                <legend className="label">Duration of Program</legend>
-                {/* Beside the legend, which must stay the fieldset's first child. */}
-                <span className="absolute -top-2 right-0 flex items-center text-xs text-slate-500">
-                  Show on list
-                  <input
-                    type="hidden"
-                    name="showDuration"
-                    value={showDuration ? "on" : "off"}
-                  />
-                  <Switch
-                    checked={showDuration}
-                    onToggle={() => setShowDuration((s) => !s)}
-                    label="Show Duration of Program on the public list"
-                    tooltip={
-                      showDuration
-                        ? "Shown on the public list"
-                        : "Hidden on the public list"
-                    }
-                  />
-                </span>
+              {/* A group rather than a fieldset: a legend can't share a row
+                  with the switch. */}
+              <div role="group" aria-labelledby="duration-label">
+                <div className="flex items-center justify-between gap-2">
+                  <span id="duration-label" className="label">
+                    Duration of Program
+                  </span>
+                  {/* Negative margin keeps the row as tall as the Status label. */}
+                  <span className="-my-2 flex items-center text-xs text-slate-500">
+                    Show on list
+                    <input
+                      type="hidden"
+                      name="showDuration"
+                      value={showDuration ? "on" : "off"}
+                    />
+                    <Switch
+                      checked={showDuration}
+                      onToggle={() => setShowDuration((s) => !s)}
+                      label="Show Duration of Program on the public list"
+                      tooltip={
+                        showDuration
+                          ? "Shown on the public list"
+                          : "Hidden on the public list"
+                      }
+                    />
+                  </span>
+                </div>
                 <div className="mt-1 grid grid-cols-2 gap-2">
                   <label className="block">
                     <span className="sr-only">Start date</span>
@@ -428,7 +434,7 @@ export default function ProgramForm({
                     ? `Start and end. The list shows “${formatDuration(startDate || null, endDate || null)}”.`
                     : "Hidden: the list shows a blank. The dates still set the automatic status."}
                 </p>
-              </fieldset>
+              </div>
               <label className="block">
                 <span className="label">Status</span>
                 <span className="mt-1 block">
