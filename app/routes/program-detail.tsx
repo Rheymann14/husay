@@ -6,7 +6,6 @@ import { BrieferPrintDialog } from "~/components/briefer-print-dialog";
 import { RichText } from "~/components/rich-text";
 import { StatusBadge } from "~/components/status-badge";
 import { SITE } from "~/lib/branding";
-import { formatDuration } from "~/lib/format";
 import {
   getProgram,
   getProgramByTrackingNo,
@@ -76,8 +75,6 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   // Closing goes back to the list with the same search and page.
   const closeTo = `/${useLocation().search}`;
-  const sectionsBefore = program.sections.slice(0, program.durationPosition);
-  const sectionsAfter = program.sections.slice(program.durationPosition);
   const [printOpen, setPrintOpen] = useState(false);
 
   useEffect(() => {
@@ -151,24 +148,7 @@ export default function ProgramDetail({ loaderData }: Route.ComponentProps) {
           <Row label="Name of Program">
             <span className="font-semibold text-slate-900">{program.title}</span>
           </Row>
-          {sectionsBefore.map((section) => (
-            <Row key={section.id} label={section.heading}>
-              <RichText text={section.body} />
-            </Row>
-          ))}
-          {program.showDuration && (
-            <Row label="Duration">
-              <p>
-                {formatDuration(program.startDate, program.endDate, { long: true })}
-              </p>
-              {program.durationDetails && (
-                <div className="mt-2">
-                  <RichText text={program.durationDetails} />
-                </div>
-              )}
-            </Row>
-          )}
-          {sectionsAfter.map((section) => (
+          {program.sections.map((section) => (
             <Row key={section.id} label={section.heading}>
               <RichText text={section.body} />
             </Row>

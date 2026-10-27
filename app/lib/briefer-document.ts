@@ -3,7 +3,6 @@
 // same in the preview frame, on paper and in the PDF.
 
 import { LOGOS, SITE } from "~/lib/branding";
-import { formatDuration } from "~/lib/format";
 import { toHtml } from "~/lib/rich-text";
 
 export type BrieferProgram = {
@@ -12,11 +11,6 @@ export type BrieferProgram = {
   title: string;
   status: { name: string } | null;
   closed: boolean;
-  startDate: string | null;
-  endDate: string | null;
-  durationDetails: string;
-  durationPosition: number;
-  showDuration: boolean;
   sections: { id: number; heading: string; body: string }[];
   links: { id: number; label: string; url: string; isActive: boolean }[];
 };
@@ -52,17 +46,9 @@ export function brieferFileName(trackingNo: string) {
 
 /** The full HTML document. `origin` makes the logos and source link absolute. */
 export function brieferDocument(program: BrieferProgram, origin: string) {
-  const before = program.sections.slice(0, program.durationPosition);
-  const after = program.sections.slice(program.durationPosition);
-  const duration =
-    `<p>${escapeHtml(formatDuration(program.startDate, program.endDate, { long: true }))}</p>` +
-    (program.durationDetails.trim() ? richText(program.durationDetails) : "");
-
   const rows = [
     row("Name of Program", `<strong>${escapeHtml(program.title)}</strong>`),
-    ...before.map((s) => row(s.heading, richText(s.body))),
-    ...(program.showDuration ? [row("Duration", duration)] : []),
-    ...after.map((s) => row(s.heading, richText(s.body))),
+    ...program.sections.map((s) => row(s.heading, richText(s.body))),
   ].join("");
 
   const activeLinks = program.links.filter((link) => link.isActive);

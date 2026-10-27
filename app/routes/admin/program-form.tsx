@@ -63,9 +63,6 @@ const programSchema = z
     title: z.string().trim().min(1, "Enter the program title").max(300),
     startDate: optionalDate,
     endDate: optionalDate,
-    durationDetails: richText,
-    durationPosition: z.number().int().min(0),
-    showDuration: z.boolean(),
     status: z.string(),
     isPublished: z.boolean(),
     links: z.array(
@@ -109,7 +106,6 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const bodies = await Promise.all(
     form.getAll("sectionBody").map((b) => sanitizeHtml(String(b))),
   );
-  const durationAt = Number(text("durationPosition")) || 0;
   const rows = headings
     .map((heading, index) => ({ heading, body: bodies[index] ?? "", index }))
     .filter((s) => s.heading.trim() || s.body);
@@ -120,9 +116,6 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     title: text("title"),
     startDate: text("startDate"),
     endDate: text("endDate"),
-    durationDetails: await sanitizeHtml(text("durationDetails")),
-    durationPosition: rows.filter((r) => r.index < durationAt).length,
-    showDuration: form.get("showDuration") === "on",
     status: text("status"),
     isPublished: form.get("isPublished") === "on",
     links,
@@ -167,27 +160,31 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-red-700">{message}</p>;
 }
 
-/** On/off switch, e.g. for an application link or the Duration row. */
-function Switch({
+/** On/off switch for an application link. */
+function LinkSwitch({
   checked,
-  disabled = false,
+  disabled,
   onToggle,
   label,
-  tooltip,
   className = "",
 }: {
   checked: boolean;
-  disabled?: boolean;
+  disabled: boolean;
   onToggle: () => void;
   label: string;
-  tooltip: string;
   className?: string;
 }) {
   // The tooltip sits on a wrapper: disabled buttons get no pointer events.
   return (
     <span
       className={`flex h-[34px] items-center px-1 ${className}`}
-      data-tooltip={tooltip}
+      data-tooltip={
+        disabled
+          ? "Disabled while the program is closed"
+          : checked
+            ? "Enabled on the landing page"
+            : "Disabled on the landing page"
+      }
     >
       <button
         type="button"
@@ -212,20 +209,19 @@ function Switch({
 }
 
 // Suggested rows for a new program, following the program briefer template.
-const NEW_PROGRAM_ROWS = {
-  before: ["Program Provider", "Brief Description"],
-  after: ["Description / Profile of Target Participants"],
-};
+const NEW_PROGRAM_ROWS = [
+  "Program Provider",
+  "Brief Description",
+  "Description / Profile of Target Participants",
+];
 
 // isNew rows were added since the last save and are highlighted.
-type BrieferRow =
-  | { key: number; kind: "row"; heading: string; body: string; isNew?: boolean }
-  | { key: number; kind: "duration" };
+type BrieferRow = { key: number; heading: string; body: string; isNew?: boolean };
 
 const newRowHighlight = "border-amber-300 bg-amber-50";
 
 // Drag-and-drop ids; prefixed because dnd-kit mishandles the id 0.
-const rowId = (row: BrieferRow) => (row.kind === "duration" ? "duration" : `row-${row.key}`);
+const rowId = (row: BrieferRow) => `row-${row.key}`;
 const linkId = (link: { key: number }) => `link-${link.key}`;
 
 function NewTag() {
@@ -236,19 +232,8 @@ function NewTag() {
   );
 }
 
-function initialRows(
-  sections: { heading: string; body: string }[],
-  durationPosition: number,
-): BrieferRow[] {
-  const rows: BrieferRow[] = sections.map((s, i) => ({
-    key: i + 1,
-    kind: "row",
-    heading: s.heading,
-    body: s.body,
-  }));
-  const at = Math.max(0, Math.min(durationPosition, rows.length));
-  rows.splice(at, 0, { key: 0, kind: "duration" });
-  return rows;
+function initialRows(sections: { heading: string; body: string }[]): BrieferRow[] {
+  return sections.map((s, i) => ({ key: i + 1, heading: s.heading, body: s.body }));
 }
 
 export default function ProgramForm({
@@ -308,39 +293,24 @@ export default function ProgramForm({
   const removeLink = (key: number) =>
     setLinks((rows) => rows.filter((r) => r.key !== key));
 
-  // Briefer rows, including the built-in Duration row. Bodies live in each
-  // editor; only order and headings are tracked here, keyed so editors
-  // survive reordering.
+  // Briefer rows. Bodies live in each editor; only order and headings are
+  // tracked here, keyed so editors survive reordering.
   const [rows, setRows] = useState<BrieferRow[]>(() => {
-    if (v) return initialRows(v.sections, v.durationPosition);
-    if (program) return initialRows(program.sections, program.durationPosition);
-    const blank = (heading: string) => ({ heading, body: "" });
-    return initialRows(
-      [...NEW_PROGRAM_ROWS.before, ...NEW_PROGRAM_ROWS.after].map(blank),
-      NEW_PROGRAM_ROWS.before.length,
-    );
+    if (v) return initialRows(v.sections);
+    if (program) return initialRows(program.sections);
+    return initialRows(NEW_PROGRAM_ROWS.map((heading) => ({ heading, body: "" })));
   });
   const [nextRowKey, setNextRowKey] = useState(rows.length + 1);
 
   const addRow = () => {
     focusAfterAdd.current = `row-heading-${nextRowKey}`;
-    setRows((r) => [
-      ...r,
-      { key: nextRowKey, kind: "row", heading: "", body: "", isNew: true },
-    ]);
+    setRows((r) => [...r, { key: nextRowKey, heading: "", body: "", isNew: true }]);
     setNextRowKey((k) => k + 1);
   };
   const updateHeading = (key: number, heading: string) =>
-    setRows((r) =>
-      r.map((row) => (row.key === key && row.kind === "row" ? { ...row, heading } : row)),
-    );
+    setRows((r) => r.map((row) => (row.key === key ? { ...row, heading } : row)));
   const removeRow = (key: number) =>
     setRows((r) => r.filter((row) => row.key !== key));
-
-  const durationPosition = rows.findIndex((r) => r.kind === "duration");
-  const [showDuration, setShowDuration] = useState(
-    v?.showDuration ?? program?.showDuration ?? true,
-  );
 
   useEffect(() => {
     const id = focusAfterAdd.current;
@@ -361,9 +331,6 @@ export default function ProgramForm({
     autoStatus,
   );
 
-  // Index among the custom rows, which is how the server reports row errors.
-  let rowIndex = -1;
-
   return (
     <div className="mx-auto max-w-3xl space-y-3 lg:max-w-[65rem]">
       <Link
@@ -382,8 +349,6 @@ export default function ProgramForm({
         className="lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-4"
         noValidate
       >
-        <input type="hidden" name="durationPosition" value={durationPosition} />
-        <input type="hidden" name="showDuration" value={showDuration ? "on" : "off"} />
         <div className="space-y-3 lg:pb-8">
           <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
             <h2 className="font-semibold text-slate-900">Program</h2>
@@ -479,116 +444,54 @@ export default function ProgramForm({
             </div>
             <SortableList items={rows} getId={rowId} onReorder={setRows}>
               <ol className="space-y-3">
-                {rows.map((row, i) => {
-                  if (row.kind === "duration") {
-                    return (
-                      <SortableItem
-                        key="duration"
-                        id={rowId(row)}
-                        handleLabel="Drag to reorder Duration row"
-                        className="space-y-2 rounded-md border border-navy-100 bg-navy-50/50 p-3"
-                      >
-                        {(handle) => (
-                          <>
-                            <div className="flex items-center gap-1">
-                              {handle}
-                              <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-slate-900">
-                                Duration
-                                <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
-                                  <Lock className="size-3" aria-hidden />
-                                  Built-in
-                                </span>
-                                {!showDuration && (
-                                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                                    Hidden
-                                  </span>
-                                )}
-                              </p>
-                              <Switch
-                                checked={showDuration}
-                                onToggle={() => setShowDuration((s) => !s)}
-                                label="Show Duration row"
-                                tooltip={
-                                  showDuration
-                                    ? "Shown in the briefer and PDF"
-                                    : "Hidden from the briefer and PDF"
-                                }
-                              />
-                            </div>
-                            <div className={`space-y-2 ${showDuration ? "" : "opacity-60"}`}>
-                              <p className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900">
-                                {formatDuration(startDate || null, endDate || null, { long: true })}
-                              </p>
-                              <p className="hint -mt-1">
-                                {showDuration
-                                  ? "First line comes from Duration of Program. Add the schedule details below."
-                                  : "Hidden from the briefer and PDF. The dates and details are kept."}
-                              </p>
-                              <RichTextEditor
-                                name="durationDetails"
-                                label="Duration details"
-                                defaultValue={v?.durationDetails ?? program?.durationDetails}
-                                placeholder="e.g. Online: Seven sessions of 2-hour virtual masterclasses"
-                              />
-                              <FieldError message={errors.durationDetails} />
-                            </div>
-                          </>
-                        )}
-                      </SortableItem>
-                    );
-                  }
-
-                  rowIndex += 1;
-                  const errorIndex = rowIndex;
-                  return (
-                    <SortableItem
-                      key={row.key}
-                      id={rowId(row)}
-                      handleLabel={`Drag to reorder row ${i + 1}`}
-                      className={`space-y-2 rounded-md border p-3 ${
-                        row.isNew ? newRowHighlight : "border-slate-200 bg-slate-50/60"
-                      }`}
-                    >
-                      {(handle) => (
-                        <>
-                          <div className="flex items-start gap-1">
-                            {handle}
-                            <div className="min-w-0 flex-1">
-                              <input
-                                id={`row-heading-${row.key}`}
-                                name="sectionHeading"
-                                value={row.heading}
-                                onChange={(e) => updateHeading(row.key, e.target.value)}
-                                placeholder="Row label, e.g. Program Provider"
-                                aria-label={`Row ${i + 1} label`}
-                                className="input font-medium"
-                              />
-                              <FieldError message={errors[`sections.${errorIndex}.heading`]} />
-                            </div>
-                            <div className="flex shrink-0 items-center">
-                              {row.isNew && <NewTag />}
-                              <button
-                                type="button"
-                                onClick={() => removeRow(row.key)}
-                                className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
-                                aria-label={`Remove row ${i + 1}`}
-                                data-tooltip="Remove row"
-                              >
-                                <Trash2 className="size-4" aria-hidden />
-                              </button>
-                            </div>
+                {rows.map((row, i) => (
+                  <SortableItem
+                    key={row.key}
+                    id={rowId(row)}
+                    handleLabel={`Drag to reorder row ${i + 1}`}
+                    className={`space-y-2 rounded-md border p-3 ${
+                      row.isNew ? newRowHighlight : "border-slate-200 bg-slate-50/60"
+                    }`}
+                  >
+                    {(handle) => (
+                      <>
+                        <div className="flex items-start gap-1">
+                          {handle}
+                          <div className="min-w-0 flex-1">
+                            <input
+                              id={`row-heading-${row.key}`}
+                              name="sectionHeading"
+                              value={row.heading}
+                              onChange={(e) => updateHeading(row.key, e.target.value)}
+                              placeholder="Row label, e.g. Program Provider"
+                              aria-label={`Row ${i + 1} label`}
+                              className="input font-medium"
+                            />
+                            <FieldError message={errors[`sections.${i}.heading`]} />
                           </div>
-                          <RichTextEditor
-                            name="sectionBody"
-                            label={row.heading || `Row ${i + 1} content`}
-                            defaultValue={row.body}
-                          />
-                          <FieldError message={errors[`sections.${errorIndex}.body`]} />
-                        </>
-                      )}
-                    </SortableItem>
-                  );
-                })}
+                          <div className="flex shrink-0 items-center">
+                            {row.isNew && <NewTag />}
+                            <button
+                              type="button"
+                              onClick={() => removeRow(row.key)}
+                              className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-700"
+                              aria-label={`Remove row ${i + 1}`}
+                              data-tooltip="Remove row"
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                            </button>
+                          </div>
+                        </div>
+                        <RichTextEditor
+                          name="sectionBody"
+                          label={row.heading || `Row ${i + 1} content`}
+                          defaultValue={row.body}
+                        />
+                        <FieldError message={errors[`sections.${i}.body`]} />
+                      </>
+                    )}
+                  </SortableItem>
+                ))}
               </ol>
             </SortableList>
             <button
@@ -675,18 +578,11 @@ export default function ProgramForm({
                             name="linkEnabled"
                             value={link.isEnabled ? "on" : "off"}
                           />
-                          <Switch
+                          <LinkSwitch
                             checked={link.isEnabled && !linksClosed}
                             disabled={linksClosed}
                             onToggle={() => toggleLink(link.key)}
                             label={`Link ${i + 1} enabled`}
-                            tooltip={
-                              linksClosed
-                                ? "Disabled while the program is closed"
-                                : link.isEnabled
-                                  ? "Enabled on the landing page"
-                                  : "Disabled on the landing page"
-                            }
                             className="col-start-3 row-start-1 sm:col-start-4"
                           />
                           <button

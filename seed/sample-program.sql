@@ -5,7 +5,7 @@
 
 INSERT INTO `programs` (
 	`slug`, `tracking_no`, `short_name`, `title`, `start_date`, `end_date`,
-	`duration_details`, `duration_position`, `is_published`
+	`is_published`
 ) VALUES (
 	-- Slugs are unique, so seeding again numbers the new copy.
 	(SELECT CASE WHEN count(*) = 0
@@ -18,13 +18,6 @@ INSERT INTO `programs` (
 	'Higher Education Innovation Leaders Fellowship Program',
 	'2026-10-01',
 	'2027-03-31',
-	'- Online: Seven sessions of 2-hour virtual masterclasses (including launching)
-  - Additional 20 hours of offline coursework, assignments, and preparatory activities for participants
-- Onsite:
-  - 5-day immersive classes at Arizona State University
-  - 1.5-day capstone / culminating session in Manila',
-	-- Duration comes after Program Provider and Brief Description.
-	2,
 	1
 );
 

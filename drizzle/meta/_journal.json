@@ -99,6 +99,13 @@
       "when": 1793094898910,
       "tag": "0013_program_show_duration",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1793096538902,
+      "tag": "0014_drop_duration_row",
+      "breakpoints": true
     }
   ]
 }

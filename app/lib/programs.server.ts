@@ -55,7 +55,6 @@ const listColumns = {
   startDate: programs.startDate,
   endDate: programs.endDate,
   isPublished: programs.isPublished,
-  showDuration: programs.showDuration,
   statusSetting: programs.status,
 };
 
@@ -403,27 +402,6 @@ export async function setProgramStatus(id: number, status: StatusSetting) {
     .where(eq(programs.id, id))
     .returning({ shortName: programs.shortName });
   return row?.shortName;
-}
-
-/** How many programs show their Duration row, and how many hide it. */
-export async function countDurationShown() {
-  const [row] = await getDb()
-    .select({
-      total: count(),
-      hidden: sql<number>`coalesce(sum(${programs.showDuration} = 0), 0)`,
-    })
-    .from(programs);
-  return { shown: row.total - row.hidden, hidden: row.hidden };
-}
-
-/** Shows or hides the briefer's Duration row on every program. Returns how many changed. */
-export async function setDurationShownForAll(show: boolean) {
-  const rows = await getDb()
-    .update(programs)
-    .set({ showDuration: show, updatedAt: sql`CURRENT_TIMESTAMP` })
-    .where(eq(programs.showDuration, !show))
-    .returning({ id: programs.id });
-  return rows.length;
 }
 
 /** Returns the removed program's short name, or undefined when it didn't exist. */
