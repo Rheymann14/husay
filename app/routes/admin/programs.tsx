@@ -31,8 +31,11 @@ export function meta({}: Route.MetaArgs) {
   return [{ title: `Manage programs | ${SITE.name}` }];
 }
 
+// "Show … entries" choices; the first is the default.
+const PAGE_SIZES = [10, 50, 100] as const;
+
 export async function loader({ request }: Route.LoaderArgs) {
-  const params = getListParams(request);
+  const params = getListParams(request, PAGE_SIZES);
   const sort = getProgramSort(request);
   const [list, duration] = await Promise.all([
     searchPrograms(params, { sort }),
@@ -428,6 +431,7 @@ export default function AdminPrograms({ loaderData }: Route.ComponentProps) {
           page={page}
           pageCount={pageCount}
           pageSize={pageSize}
+          pageSizes={PAGE_SIZES}
           total={total}
           noun={total === 1 ? "program" : "programs"}
         />
