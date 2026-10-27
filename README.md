@@ -71,6 +71,10 @@ and Status. Everything else in the briefer (Program Provider, Brief Description,
 Target Participants, and any other row) is a row the admin adds, renames,
 reorders or removes. To show a Duration row, add one like any other row.
 
+The Duration of Program switch on the Add/Edit page hides it from the public
+list, which then shows a blank; the dates still set the automatic status. To
+show or hide it on every program at once, use **Duration** on the Programs page.
+
 Row text uses a rich text editor (bold, italic, underline, bullets, sub-bullets
 with Tab, links). Drag its bottom-right corner to resize it, or use the expand
 button to edit in full screen.

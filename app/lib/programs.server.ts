@@ -54,6 +54,7 @@ const listColumns = {
   title: programs.title,
   startDate: programs.startDate,
   endDate: programs.endDate,
+  showDuration: programs.showDuration,
   isPublished: programs.isPublished,
   statusSetting: programs.status,
 };
@@ -162,13 +163,20 @@ export async function searchPrograms(
       return i === -1 ? statuses.length : i;
     };
     type Row = (typeof numbered)[number];
+    // A hidden duration shows blank, so it sorts with "To be announced".
+    const shownDates = (r: Row) =>
+      r.showDuration ? [r.startDate, r.endDate] : [null, null];
     const compare: Record<ProgramSortKey, (a: Row, b: Row) => number> = {
       no: (a, b) => dir * (a.no - b.no),
       provider: (a, b) => dir * byText(a.shortName, b.shortName),
       title: (a, b) => dir * byText(a.title, b.title),
-      duration: (a, b) =>
-        byDateValue(a.startDate, b.startDate, dir) ||
-        byDateValue(a.endDate, b.endDate, dir),
+      duration: (a, b) => {
+        const [aStart, aEnd] = shownDates(a);
+        const [bStart, bEnd] = shownDates(b);
+        return (
+          byDateValue(aStart, bStart, dir) || byDateValue(aEnd, bEnd, dir)
+        );
+      },
       status: (a, b) => dir * (statusRank(a.status) - statusRank(b.status)),
       // Published first, then drafts.
       visibility: (a, b) => dir * (Number(b.isPublished) - Number(a.isPublished)),
@@ -402,6 +410,27 @@ export async function setProgramStatus(id: number, status: StatusSetting) {
     .where(eq(programs.id, id))
     .returning({ shortName: programs.shortName });
   return row?.shortName;
+}
+
+/** How many programs show their Duration of Program on the list, and how many hide it. */
+export async function countDurationShown() {
+  const [row] = await getDb()
+    .select({
+      total: count(),
+      hidden: sql<number>`coalesce(sum(${programs.showDuration} = 0), 0)`,
+    })
+    .from(programs);
+  return { shown: row.total - row.hidden, hidden: row.hidden };
+}
+
+/** Shows or hides the Duration of Program on every program. Returns how many changed. */
+export async function setDurationShownForAll(show: boolean) {
+  const rows = await getDb()
+    .update(programs)
+    .set({ showDuration: show, updatedAt: sql`CURRENT_TIMESTAMP` })
+    .where(eq(programs.showDuration, !show))
+    .returning({ id: programs.id });
+  return rows.length;
 }
 
 /** Returns the removed program's short name, or undefined when it didn't exist. */

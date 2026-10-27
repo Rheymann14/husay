@@ -63,6 +63,7 @@ const programSchema = z
     title: z.string().trim().min(1, "Enter the program title").max(300),
     startDate: optionalDate,
     endDate: optionalDate,
+    showDuration: z.boolean(),
     status: z.string(),
     isPublished: z.boolean(),
     links: z.array(
@@ -116,6 +117,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     title: text("title"),
     startDate: text("startDate"),
     endDate: text("endDate"),
+    showDuration: form.get("showDuration") === "on",
     status: text("status"),
     isPublished: form.get("isPublished") === "on",
     links,
@@ -160,31 +162,27 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-red-700">{message}</p>;
 }
 
-/** On/off switch for an application link. */
-function LinkSwitch({
+/** On/off switch, e.g. for an application link. */
+function Switch({
   checked,
-  disabled,
+  disabled = false,
   onToggle,
   label,
+  tooltip,
   className = "",
 }: {
   checked: boolean;
-  disabled: boolean;
+  disabled?: boolean;
   onToggle: () => void;
   label: string;
+  tooltip: string;
   className?: string;
 }) {
   // The tooltip sits on a wrapper: disabled buttons get no pointer events.
   return (
     <span
       className={`flex h-[34px] items-center px-1 ${className}`}
-      data-tooltip={
-        disabled
-          ? "Disabled while the program is closed"
-          : checked
-            ? "Enabled on the landing page"
-            : "Disabled on the landing page"
-      }
+      data-tooltip={tooltip}
     >
       <button
         type="button"
@@ -252,6 +250,9 @@ export default function ProgramForm({
     v?.startDate ?? program?.startDate ?? "",
   );
   const [endDate, setEndDate] = useState(v?.endDate ?? program?.endDate ?? "");
+  const [showDuration, setShowDuration] = useState(
+    v?.showDuration ?? program?.showDuration ?? true,
+  );
 
   const [links, setLinks] = useState(() =>
     (v?.links ?? program?.links ?? []).map((l, i) => ({
@@ -375,8 +376,27 @@ export default function ProgramForm({
               </label>
             </div>
             <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
-              <fieldset>
+              <fieldset className="relative">
                 <legend className="label">Duration of Program</legend>
+                {/* Beside the legend, which must stay the fieldset's first child. */}
+                <span className="absolute -top-2 right-0 flex items-center text-xs text-slate-500">
+                  Show on list
+                  <input
+                    type="hidden"
+                    name="showDuration"
+                    value={showDuration ? "on" : "off"}
+                  />
+                  <Switch
+                    checked={showDuration}
+                    onToggle={() => setShowDuration((s) => !s)}
+                    label="Show Duration of Program on the public list"
+                    tooltip={
+                      showDuration
+                        ? "Shown on the public list"
+                        : "Hidden on the public list"
+                    }
+                  />
+                </span>
                 <div className="mt-1 grid grid-cols-2 gap-2">
                   <label className="block">
                     <span className="sr-only">Start date</span>
@@ -404,7 +424,9 @@ export default function ProgramForm({
                   </label>
                 </div>
                 <p className="hint">
-                  Start and end. The list shows “{formatDuration(startDate || null, endDate || null)}”.
+                  {showDuration
+                    ? `Start and end. The list shows “${formatDuration(startDate || null, endDate || null)}”.`
+                    : "Hidden: the list shows a blank. The dates still set the automatic status."}
                 </p>
               </fieldset>
               <label className="block">
@@ -578,11 +600,18 @@ export default function ProgramForm({
                             name="linkEnabled"
                             value={link.isEnabled ? "on" : "off"}
                           />
-                          <LinkSwitch
+                          <Switch
                             checked={link.isEnabled && !linksClosed}
                             disabled={linksClosed}
                             onToggle={() => toggleLink(link.key)}
                             label={`Link ${i + 1} enabled`}
+                            tooltip={
+                              linksClosed
+                                ? "Disabled while the program is closed"
+                                : link.isEnabled
+                                  ? "Enabled on the landing page"
+                                  : "Disabled on the landing page"
+                            }
                             className="col-start-3 row-start-1 sm:col-start-4"
                           />
                           <button

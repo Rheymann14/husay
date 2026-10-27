@@ -67,6 +67,11 @@ export const programs = sqliteTable(
     title: text("title").notNull(),
     startDate: text("start_date"),
     endDate: text("end_date"),
+    // Whether the public list shows the Duration of Program. Hidden shows a
+    // blank; the dates still drive the automatic status.
+    showDuration: integer("show_duration", { mode: "boolean" })
+      .notNull()
+      .default(true),
     // "auto" follows the start and end dates, "none" shows no status, anything
     // else is a program_statuses key set manually.
     status: text("status").notNull().default("auto"),

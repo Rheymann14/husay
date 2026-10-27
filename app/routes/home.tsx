@@ -214,7 +214,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                                 </span>
                               </td>
                               <td className="px-2 py-1 text-xs text-slate-600">
-                                {formatDuration(p.startDate, p.endDate)}
+                                {p.showDuration &&
+                                  formatDuration(p.startDate, p.endDate)}
                               </td>
                               <td className="px-2 py-1">
                                 <StatusBadge status={p.status} size="xs" />
@@ -260,9 +261,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                               {p.shortName}
                             </span>
                             <span className="block text-sm">{p.title}</span>
-                            <span className="block text-xs text-slate-500">
-                              {formatDuration(p.startDate, p.endDate)}
-                            </span>
+                            {p.showDuration && (
+                              <span className="block text-xs text-slate-500">
+                                {formatDuration(p.startDate, p.endDate)}
+                              </span>
+                            )}
                             <StatusBadge status={p.status} />
                           </span>
                           <ChevronRight
