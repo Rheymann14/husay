@@ -423,6 +423,16 @@ export async function countDurationShown() {
   return { shown: row.total - row.hidden, hidden: row.hidden };
 }
 
+/** Whether any published program shows its Duration of Program, so the public list needs the column. */
+export async function anyPublishedDurationShown() {
+  const [row] = await getDb()
+    .select({ id: programs.id })
+    .from(programs)
+    .where(and(eq(programs.isPublished, true), eq(programs.showDuration, true)))
+    .limit(1);
+  return row != null;
+}
+
 /** Shows or hides the Duration of Program on every program. Returns how many changed. */
 export async function setDurationShownForAll(show: boolean) {
   const rows = await getDb()

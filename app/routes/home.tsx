@@ -23,7 +23,11 @@ import { getUser } from "~/lib/auth.server";
 import { SITE } from "~/lib/branding";
 import { formatDuration } from "~/lib/format";
 import { getListParams } from "~/lib/list-params.server";
-import { getProgramSort, searchPrograms } from "~/lib/programs.server";
+import {
+  anyPublishedDurationShown,
+  getProgramSort,
+  searchPrograms,
+} from "~/lib/programs.server";
 import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
@@ -37,9 +41,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   // Rows are compact, so a page of 10 fits beside the briefer on most screens.
   const params = getListParams(request, 10);
   const sort = getProgramSort(request);
-  const [{ programs, total, page, pageCount, pageSize }, user] =
+  const [{ programs, total, page, pageCount, pageSize }, showDuration, user] =
     await Promise.all([
       searchPrograms(params, { publishedOnly: true, sort }),
+      anyPublishedDurationShown(),
       getUser(request),
     ]);
   return {
@@ -50,13 +55,23 @@ export async function loader({ request }: Route.LoaderArgs) {
     pageSize,
     query: params.query,
     sort,
+    showDuration,
     signedIn: user != null,
   };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { programs, total, page, pageCount, pageSize, query, sort, signedIn } =
-    loaderData;
+  const {
+    programs,
+    total,
+    page,
+    pageCount,
+    pageSize,
+    query,
+    sort,
+    showDuration,
+    signedIn,
+  } = loaderData;
   const { trackingNo: selectedNo } = useParams();
   const { search } = useLocation();
   const navigate = useNavigate();
@@ -159,17 +174,21 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                           <SortHeader sortKey="title" sort={sort}>
                             Program Title
                           </SortHeader>
-                          <SortHeader
-                            sortKey="duration"
-                            sort={sort}
-                            className="w-28"
-                          >
-                            Duration of Program
-                          </SortHeader>
+                          {/* Left out when every program hides it; Status
+                              takes its width instead. */}
+                          {showDuration && (
+                            <SortHeader
+                              sortKey="duration"
+                              sort={sort}
+                              className="w-28"
+                            >
+                              Duration of Program
+                            </SortHeader>
+                          )}
                           <SortHeader
                             sortKey="status"
                             sort={sort}
-                            className="w-28"
+                            className={showDuration ? "w-28" : "w-56"}
                           >
                             Status
                           </SortHeader>
@@ -213,10 +232,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                                   {p.title}
                                 </span>
                               </td>
-                              <td className="px-2 py-1 text-xs text-slate-600">
-                                {p.showDuration &&
-                                  formatDuration(p.startDate, p.endDate)}
-                              </td>
+                              {showDuration && (
+                                <td className="px-2 py-1 text-xs text-slate-600">
+                                  {p.showDuration &&
+                                    formatDuration(p.startDate, p.endDate)}
+                                </td>
+                              )}
                               <td className="px-2 py-1">
                                 <StatusBadge status={p.status} size="xs" />
                               </td>
