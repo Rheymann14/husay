@@ -206,7 +206,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                               onClick={() => open(p.trackingNo)}
                               onMouseEnter={() => setHoveredNo(p.trackingNo)}
                               aria-selected={selected}
-                              className={`cursor-pointer transition-colors ${
+                              // Every row is as tall as a 3-line one, the most
+                              // its text can wrap to, so each full page is the
+                              // same height however long its titles are.
+                              className={`h-[calc(3lh+0.5rem)] cursor-pointer transition-colors ${
                                 selected
                                   ? "bg-navy-50 shadow-[inset_4px_0_0_var(--color-gold-500)]"
                                   : "hover:bg-slate-50"
